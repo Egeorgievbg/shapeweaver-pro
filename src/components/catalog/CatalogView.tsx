@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { Search, X, Boxes, CheckCircle2, ImageOff, AlertCircle } from "lucide-react";
+import { Search, X, CheckCircle2, ImageOff, AlertCircle } from "lucide-react";
 import { useProductsPage, useRelations, type CatalogCard } from "@/integrations/boxcraft";
+import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 const PAGE_SIZE = 24;
@@ -12,6 +13,7 @@ export function CatalogView() {
   const [category, setCategory] = useState<string | undefined>();
   const [material, setMaterial] = useState<string | undefined>();
   const [page, setPage] = useState(0);
+  const { t } = useI18n();
 
   const relations = useRelations();
   const products = useProductsPage({
@@ -35,8 +37,11 @@ export function CatalogView() {
           <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <input
             value={q}
-            onChange={(e) => { setQ(e.target.value); setPage(0); }}
-            placeholder="Search products"
+            onChange={(e) => {
+              setQ(e.target.value);
+              setPage(0);
+            }}
+            placeholder={t("filter.search")}
             className="w-full rounded-md border border-input bg-background py-2 pl-8 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
           />
           {q && (
@@ -50,19 +55,46 @@ export function CatalogView() {
           )}
         </div>
 
-        <FilterGroup label="Family" value={family} onChange={(v) => { setFamily(v); setPage(0); }}
-          items={relations.data?.families ?? []} />
-        <FilterGroup label="Category" value={category} onChange={(v) => { setCategory(v); setPage(0); }}
-          items={relations.data?.categories ?? []} />
-        <FilterGroup label="Material" value={material} onChange={(v) => { setMaterial(v); setPage(0); }}
-          items={relations.data?.materials ?? []} />
+        <FilterGroup
+          label={t("filter.family")}
+          value={family}
+          onChange={(v) => {
+            setFamily(v);
+            setPage(0);
+          }}
+          items={relations.data?.families ?? []}
+        />
+        <FilterGroup
+          label={t("filter.category")}
+          value={category}
+          onChange={(v) => {
+            setCategory(v);
+            setPage(0);
+          }}
+          items={relations.data?.categories ?? []}
+        />
+        <FilterGroup
+          label={t("filter.material")}
+          value={material}
+          onChange={(v) => {
+            setMaterial(v);
+            setPage(0);
+          }}
+          items={relations.data?.materials ?? []}
+        />
 
         {activeFilters > 0 && (
           <button
-            onClick={() => { setFamily(undefined); setCategory(undefined); setMaterial(undefined); setQ(""); setPage(0); }}
+            onClick={() => {
+              setFamily(undefined);
+              setCategory(undefined);
+              setMaterial(undefined);
+              setQ("");
+              setPage(0);
+            }}
             className="mt-4 w-full rounded-md border border-input px-3 py-1.5 text-xs text-muted-foreground hover:bg-accent"
           >
-            Clear filters ({activeFilters})
+            {t("filter.clear")} ({activeFilters})
           </button>
         )}
       </aside>
@@ -72,28 +104,39 @@ export function CatalogView() {
         <div className="mb-4 flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
             {products.isLoading
-              ? "Loading…"
+              ? t("catalog.loading")
               : products.isError
-              ? "Failed to load"
-              : `${total.toLocaleString()} product${total === 1 ? "" : "s"}`}
+                ? t("catalog.failed")
+                : `${total.toLocaleString()} ${t(total === 1 ? "catalog.product" : "catalog.products")}`}
           </p>
           {pageCount > 1 && (
             <div className="flex items-center gap-2 text-xs">
-              <button onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0}
-                className="rounded border border-input px-2 py-1 disabled:opacity-40">
-                Prev
+              <button
+                onClick={() => setPage((p) => Math.max(0, p - 1))}
+                disabled={page === 0}
+                className="rounded border border-input px-2 py-1 disabled:opacity-40"
+              >
+                {t("catalog.prev")}
               </button>
-              <span className="font-mono text-muted-foreground">{page + 1} / {pageCount}</span>
-              <button onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))} disabled={page + 1 >= pageCount}
-                className="rounded border border-input px-2 py-1 disabled:opacity-40">
-                Next
+              <span className="font-mono text-muted-foreground">
+                {page + 1} / {pageCount}
+              </span>
+              <button
+                onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
+                disabled={page + 1 >= pageCount}
+                className="rounded border border-input px-2 py-1 disabled:opacity-40"
+              >
+                {t("catalog.next")}
               </button>
             </div>
           )}
         </div>
 
         {products.isError ? (
-          <ErrorState message={(products.error as Error)?.message ?? "API error"} onRetry={() => products.refetch()} />
+          <ErrorState
+            message={(products.error as Error)?.message ?? "API error"}
+            onRetry={() => products.refetch()}
+          />
         ) : (
           <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4">
             {products.isLoading && !products.data
@@ -119,7 +162,9 @@ function FilterGroup({
 }) {
   return (
     <div className="mt-5">
-      <p className="mb-2 font-mono text-xs uppercase tracking-wider text-muted-foreground">{label}</p>
+      <p className="mb-2 font-mono text-xs uppercase tracking-wider text-muted-foreground">
+        {label}
+      </p>
       <ul className="max-h-56 space-y-0.5 overflow-auto pr-1">
         {items.map((it) => {
           const active = value === it.id;
@@ -129,7 +174,9 @@ function FilterGroup({
                 onClick={() => onChange(active ? undefined : it.id)}
                 className={cn(
                   "flex w-full items-center justify-between rounded px-2 py-1 text-left text-sm",
-                  active ? "bg-accent text-accent-foreground" : "text-muted-foreground hover:bg-accent/60",
+                  active
+                    ? "bg-accent text-accent-foreground"
+                    : "text-muted-foreground hover:bg-accent/60",
                 )}
               >
                 <span className="truncate">{it.name}</span>
@@ -145,6 +192,7 @@ function FilterGroup({
 
 function ProductCard({ card }: { card: CatalogCard }) {
   const [imgFailed, setImgFailed] = useState(false);
+  const { t } = useI18n();
   return (
     <Link
       to="/studio/$productId"
@@ -167,11 +215,13 @@ function ProductCard({ card }: { card: CatalogCard }) {
         )}
         <div className="absolute right-2 top-2 flex flex-col items-end gap-1">
           {card.geometryQuality === "exact" ? (
-            <Badge tone="gold" icon={<CheckCircle2 className="h-3 w-3" />}>Exact</Badge>
+            <Badge tone="gold" icon={<CheckCircle2 className="h-3 w-3" />}>
+              {t("catalog.exact")}
+            </Badge>
           ) : card.geometryQuality ? (
             <Badge tone="warn">{card.geometryQuality}</Badge>
           ) : null}
-          {!card.hasKnife && <Badge tone="warn">Preview only</Badge>}
+          {!card.hasKnife && <Badge tone="warn">{t("catalog.previewOnly")}</Badge>}
         </div>
       </div>
       <div className="flex flex-1 flex-col gap-1 border-t border-panel-border p-3">
@@ -182,7 +232,8 @@ function ProductCard({ card }: { card: CatalogCard }) {
         </div>
         {card.dimensions && (
           <p className="font-mono text-[10px] text-muted-foreground">
-            {card.dimensions.length}×{card.dimensions.width}×{card.dimensions.height} {card.dimensions.unit}
+            {card.dimensions.length}×{card.dimensions.width}×{card.dimensions.height}{" "}
+            {card.dimensions.unit}
           </p>
         )}
       </div>
@@ -191,7 +242,11 @@ function ProductCard({ card }: { card: CatalogCard }) {
 }
 
 function Tag({ children }: { children: React.ReactNode }) {
-  return <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] uppercase text-muted-foreground">{children}</span>;
+  return (
+    <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] uppercase text-muted-foreground">
+      {children}
+    </span>
+  );
 }
 
 function Badge({
@@ -209,8 +264,14 @@ function Badge({
     success: "bg-success text-success-foreground",
   }[tone];
   return (
-    <span className={cn("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium", cls)}>
-      {icon}{children}
+    <span
+      className={cn(
+        "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-medium",
+        cls,
+      )}
+    >
+      {icon}
+      {children}
     </span>
   );
 }
@@ -228,17 +289,18 @@ function CardSkeleton() {
 }
 
 function ErrorState({ message, onRetry }: { message: string; onRetry: () => void }) {
+  const { t } = useI18n();
   return (
     <div className="panel-surface flex flex-col items-center justify-center gap-3 rounded-lg p-10 text-center">
       <AlertCircle className="h-8 w-8 text-destructive" />
-      <p className="text-sm font-medium">Catalog unavailable</p>
+      <p className="text-sm font-medium">{t("catalog.unavailable")}</p>
       <p className="max-w-md text-sm text-muted-foreground">{message}</p>
-      <button onClick={onRetry} className="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground">
-        Retry
+      <button
+        onClick={onRetry}
+        className="rounded-md bg-primary px-4 py-2 text-sm text-primary-foreground"
+      >
+        {t("action.retry")}
       </button>
     </div>
   );
 }
-
-/* eslint-disable-next-line @typescript-eslint/no-unused-vars */
-const _keepBoxes = Boxes;

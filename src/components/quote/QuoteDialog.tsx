@@ -4,10 +4,16 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
 import { useConfiguratorStore } from "@/stores/configurator";
 import { quoteDrafts } from "@/stores/persistence";
+import { useI18n } from "@/lib/i18n";
 import { AlertCircle } from "lucide-react";
 
 const schema = z.object({
@@ -22,12 +28,23 @@ const schema = z.object({
 });
 type FormValues = z.infer<typeof schema>;
 
-export function QuoteDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
+export function QuoteDialog({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (v: boolean) => void;
+}) {
   const model = useConfiguratorStore((s) => s.productModel);
   const exportConfiguration = useConfiguratorStore((s) => s.exportConfiguration);
   const [submitting, setSubmitting] = useState(false);
+  const { t } = useI18n();
 
-  const { register, handleSubmit, formState: { errors } } = useForm<FormValues>({
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<FormValues>({
     resolver: zodResolver(schema),
     defaultValues: { quantity: 500, consent: false as unknown as true },
   });
@@ -52,8 +69,8 @@ export function QuoteDialog({ open, onOpenChange }: { open: boolean; onOpenChang
         sourceProductId: model?.sourceId ?? null,
         status: "draft",
       });
-      toast.success("Quote saved as draft", {
-        description: "The quote endpoint is not configured yet, so we've stored your request locally.",
+      toast.success(t("quote.success"), {
+        description: t("quote.success.desc"),
       });
       onOpenChange(false);
     } catch (err) {
@@ -67,57 +84,67 @@ export function QuoteDialog({ open, onOpenChange }: { open: boolean; onOpenChang
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Request a quote</DialogTitle>
-          <DialogDescription>
-            We'll attach your configuration, dimensions, material, and preview render to the request.
-          </DialogDescription>
+          <DialogTitle>{t("quote.title")}</DialogTitle>
+          <DialogDescription>{t("quote.desc")}</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit(onSubmit)} className="grid gap-3">
-          <Field label="Full name" error={errors.name?.message}>
+          <Field label={t("quote.name")} error={errors.name?.message}>
             <input {...register("name")} className="input" />
           </Field>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Company" error={errors.company?.message}>
+            <Field label={t("quote.company")} error={errors.company?.message}>
               <input {...register("company")} className="input" />
             </Field>
-            <Field label="Phone" error={errors.phone?.message}>
+            <Field label={t("quote.phone")} error={errors.phone?.message}>
               <input {...register("phone")} className="input" />
             </Field>
           </div>
-          <Field label="Email" error={errors.email?.message}>
+          <Field label={t("quote.email")} error={errors.email?.message}>
             <input type="email" {...register("email")} className="input" />
           </Field>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Quantity" error={errors.quantity?.message}>
+            <Field label={t("quote.quantity")} error={errors.quantity?.message}>
               <input type="number" {...register("quantity")} className="input" />
             </Field>
-            <Field label="Deadline" error={errors.deadline?.message}>
+            <Field label={t("quote.deadline")} error={errors.deadline?.message}>
               <input type="date" {...register("deadline")} className="input" />
             </Field>
           </div>
-          <Field label="Notes" error={errors.notes?.message}>
-            <textarea rows={3} {...register("notes")} className="input" placeholder="Print effects, colors, delivery details…" />
+          <Field label={t("quote.notes")} error={errors.notes?.message}>
+            <textarea
+              rows={3}
+              {...register("notes")}
+              className="input"
+              placeholder={t("quote.notes.placeholder")}
+            />
           </Field>
 
           <label className="flex items-start gap-2 text-xs">
             <input type="checkbox" {...register("consent")} className="mt-0.5 accent-gold" />
-            <span>I agree to be contacted regarding this request.</span>
+            <span>{t("quote.consent")}</span>
           </label>
           {errors.consent && <p className="text-xs text-destructive">{errors.consent.message}</p>}
 
           <div className="rounded-md border border-warning/40 bg-warning/10 p-3 text-xs">
             <AlertCircle className="mr-1 inline h-3 w-3" />
-            The quote submission endpoint is not configured yet. Your request will be saved as a
-            local draft until an endpoint is provided.
+            {t("quote.notConfiguredNote")}
           </div>
 
           <DialogFooter>
-            <button type="button" onClick={() => onOpenChange(false)}
-              className="rounded-md border border-input px-4 py-2 text-sm hover:bg-accent">Cancel</button>
-            <button type="submit" disabled={submitting}
-              className="rounded-md bg-gold px-4 py-2 text-sm font-medium text-gold-foreground disabled:opacity-50">
-              {submitting ? "Saving…" : "Save as draft"}
+            <button
+              type="button"
+              onClick={() => onOpenChange(false)}
+              className="rounded-md border border-input px-4 py-2 text-sm hover:bg-accent"
+            >
+              {t("action.cancel")}
+            </button>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="rounded-md bg-gold px-4 py-2 text-sm font-medium text-gold-foreground disabled:opacity-50"
+            >
+              {submitting ? t("quote.saving") : t("quote.save")}
             </button>
           </DialogFooter>
         </form>
@@ -131,7 +158,15 @@ export function QuoteDialog({ open, onOpenChange }: { open: boolean; onOpenChang
   );
 }
 
-function Field({ label, error, children }: { label: string; error?: string; children: React.ReactNode }) {
+function Field({
+  label,
+  error,
+  children,
+}: {
+  label: string;
+  error?: string;
+  children: React.ReactNode;
+}) {
   return (
     <div>
       <label className="text-xs text-muted-foreground">{label}</label>
