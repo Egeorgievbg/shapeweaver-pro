@@ -1,6 +1,6 @@
 import { Canvas } from "@react-three/fiber";
 import { OrbitControls, ContactShadows, Environment, Grid, Bounds } from "@react-three/drei";
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import * as THREE from "three";
 import { useConfiguratorStore } from "@/stores/configurator";
 import { GeometryResolver } from "@/features/configurator/geometry/GeometryResolver";
@@ -130,7 +130,10 @@ export function Viewport3D() {
         <directionalLight position={[0, 4, -6]} intensity={scene.rimLightIntensity} />
 
         {scene.preset !== "transparent" && (
-          <Environment preset={scene.preset === "studio-dark" ? "warehouse" : scene.preset === "warm" ? "sunset" : scene.preset === "cool" ? "dawn" : "studio"} />
+          <Environment
+            preset={scene.preset === "studio-dark" ? "warehouse" : scene.preset === "warm" ? "sunset" : scene.preset === "cool" ? "dawn" : "studio"}
+            environmentIntensity={scene.environmentIntensity}
+          />
         )}
 
         {scene.showGrid && <Grid args={[20, 20]} cellColor="#c0c0c0" sectionColor="#888888" fadeDistance={20} />}
@@ -143,6 +146,8 @@ export function Viewport3D() {
               materialColor={material.color}
               roughness={material.roughness}
               metalness={material.metalness}
+              clearcoat={material.clearcoat}
+              clearcoatRoughness={material.clearcoatRoughness}
               selectedPanelId={selectedPanelId}
               onPanelClick={selectPanel}
             />
@@ -187,7 +192,3 @@ export function Viewport3D() {
 export function useViewportCanvas() {
   return typeof document !== "undefined" ? (document.querySelector("canvas") as HTMLCanvasElement | null) : null;
 }
-
-// helpers keep useMemo import used
-const _keep = useMemo;
-void _keep;

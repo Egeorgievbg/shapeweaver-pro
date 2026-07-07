@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   ArrowLeft,
@@ -225,9 +225,17 @@ export function StudioWorkspace() {
 /* ---------------- Small internal components ---------------- */
 
 function FoldTicker({ playing }: { playing: boolean }) {
-  const foldProgress = useConfiguratorStore((s) => s.foldProgress);
   const setFoldProgress = useConfiguratorStore((s) => s.setFoldProgress);
-  useState(() => {
+  const foldProgress = useConfiguratorStore((s) => s.foldProgress);
+
+  // Keep a ref so the animation loop always reads the latest value without
+  // creating a new requestAnimationFrame closure on every store update.
+  const progressRef = useRef(foldProgress);
+  useEffect(() => {
+    progressRef.current = foldProgress;
+  }, [foldProgress]);
+
+  useEffect(() => {
     if (typeof window === "undefined") return;
     let raf = 0;
     let last = performance.now();
@@ -235,14 +243,15 @@ function FoldTicker({ playing }: { playing: boolean }) {
       const dt = (now - last) / 1000;
       last = now;
       if (playing) {
-        const next = (foldProgress + dt * 0.4) % 1;
+        const next = (progressRef.current + dt * 0.4) % 1;
         setFoldProgress(next);
       }
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
-  });
+  }, [playing, setFoldProgress]);
+
   return null;
 }
 

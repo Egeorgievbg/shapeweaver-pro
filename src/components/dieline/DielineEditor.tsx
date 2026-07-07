@@ -47,7 +47,6 @@ export function DielineEditor() {
   };
 
   const onMouseDown = (e: React.MouseEvent) => {
-    if (e.button !== 1 && !e.altKey) return;
     dragRef.current = { x: e.clientX - pan.x, y: e.clientY - pan.y };
   };
   const onMouseMove = (e: React.MouseEvent) => {

@@ -12,6 +12,7 @@ import type {
   RawDetailsBody,
   RawFaceOrientation,
   RawKnifeBody,
+  RawKnifeFace,
   RawPreviewBody,
 } from "./types";
 import { resolveAssetUrl, resolveGltfUrl } from "./asset-resolver";
@@ -63,8 +64,15 @@ export function normalizePayloadPackage(
   }
 
   // --- Panels ---
-  const panels: PackagingPanel[] = (knifeRaw?.facesForSvg ?? []).map((fs, i) => {
-    const raw = knifeRaw?.faces?.[i];
+  // Build a name-keyed lookup for the raw face data (bbox, etc.) since the
+  // array order of `faces` and `facesForSvg` is not guaranteed to match.
+  const rawFaceByName = new Map<string, RawKnifeFace>();
+  for (const rf of knifeRaw?.faces ?? []) {
+    rawFaceByName.set(rf.name, rf);
+  }
+
+  const panels: PackagingPanel[] = (knifeRaw?.facesForSvg ?? []).map((fs) => {
+    const raw = rawFaceByName.get(fs.name);
     const bboxX = raw?.x ?? 0;
     const bboxY = raw?.y ?? 0;
     const bboxW = raw?.w ?? 0;

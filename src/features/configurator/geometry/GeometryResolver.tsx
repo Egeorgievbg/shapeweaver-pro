@@ -11,6 +11,8 @@ interface Props {
   materialColor: string;
   roughness: number;
   metalness: number;
+  clearcoat: number;
+  clearcoatRoughness: number;
   selectedPanelId: string | null;
   onPanelClick: (id: string) => void;
 }
