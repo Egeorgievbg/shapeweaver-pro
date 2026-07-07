@@ -98,7 +98,7 @@ export function StudioWorkspace() {
               ["artwork", ImageIcon, "Artwork"],
               ["layers", Layers, "Layers"],
               ["materials", Palette, "Materials"],
-              ["dieline", FileSquare, "Dieline"],
+              ["dieline", FileText, "Dieline"],
               ["saved", Save, "Saved"],
             ] as const
           ).map(([k, Icon, lbl]) => (
