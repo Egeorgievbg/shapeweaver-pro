@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   ArrowLeft, Undo2, Redo2, Save, Download, Send, Boxes, Palette, Image as ImageIcon,
-  Layers, FileSquare, ChevronDown, Play, Pause, RotateCcw, Camera, PanelRight, Grid3x3,
+  Layers, FileText, ChevronDown, Play, Pause, RotateCcw, Camera, PanelRight, Grid3x3,
   Sun, Trash2, Plus, Eye, EyeOff, Lock, Unlock,
 } from "lucide-react";
 import { toast } from "sonner";
