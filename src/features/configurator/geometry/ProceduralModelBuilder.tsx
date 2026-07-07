@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo } from "react";
 import * as THREE from "three";
 import type { NormalizedPackagingModel } from "@/integrations/boxcraft/types";
 import { useConfiguratorStore } from "@/stores/configurator";
@@ -10,60 +10,77 @@ interface Props {
   metalness: number;
 }
 
+function safeDimension(value: unknown, fallback: number): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
 /**
- * Strategy C — procedural approximation. Uniform 6-sided box scaled to
- * dimensions. Fold progress opens the top lid.
+ * Stable Three.js fallback used whenever GLB or dieline geometry is missing or
+ * invalid. It always renders a real six-panel package and keeps the lid
+ * interactive through foldProgress.
  */
 export function ProceduralModelBuilder(props: Props) {
   const foldProgress = useConfiguratorStore((s) => s.foldProgress);
-  const d = props.model.dimensions;
-  // Normalize to scene units (~2)
-  const maxDim = Math.max(d.width, d.depth, d.height);
-  const s = 2 / maxDim;
-  const w = d.width * s;
-  const de = d.depth * s;
-  const h = d.height * s;
+  const dimensions = props.model.dimensions;
 
-  const [mat] = useState(
+  const width = safeDimension(dimensions.width, 100);
+  const depth = safeDimension(dimensions.depth, 60);
+  const height = safeDimension(dimensions.height, 40);
+  const maxDim = Math.max(width, depth, height, 1);
+  const scale = 2 / maxDim;
+
+  const w = width * scale;
+  const d = depth * scale;
+  const h = height * scale;
+  const panelThickness = Math.max(0.012, safeDimension(dimensions.thickness, 1.5) * scale);
+
+  const material = useMemo(
     () =>
-      new THREE.MeshStandardMaterial({
+      new THREE.MeshPhysicalMaterial({
         color: new THREE.Color(props.materialColor),
         roughness: props.roughness,
         metalness: props.metalness,
         side: THREE.DoubleSide,
+        clearcoat: 0.08,
+        clearcoatRoughness: 0.7,
       }),
+    [],
   );
-  useEffect(() => {
-    mat.color.set(props.materialColor);
-    mat.roughness = props.roughness;
-    mat.metalness = props.metalness;
-    mat.needsUpdate = true;
-  }, [mat, props.materialColor, props.roughness, props.metalness]);
-  useEffect(() => () => mat.dispose(), [mat]);
 
-  const lidAngle = foldProgress * (Math.PI / 2);
+  useEffect(() => {
+    material.color.set(props.materialColor);
+    material.roughness = props.roughness;
+    material.metalness = props.metalness;
+    material.needsUpdate = true;
+  }, [material, props.materialColor, props.roughness, props.metalness]);
+
+  useEffect(() => () => material.dispose(), [material]);
+
+  const lidAngle = THREE.MathUtils.clamp(foldProgress, 0, 1) * Math.PI * 0.72;
+
   return (
-    <group>
-      {/* Bottom + walls */}
-      <mesh material={mat} position={[0, -h / 2 + 0.001, 0]}>
-        <boxGeometry args={[w, 0.01, de]} />
+    <group position={[0, -h * 0.05, 0]}>
+      <mesh material={material} position={[0, -h / 2, 0]} castShadow receiveShadow>
+        <boxGeometry args={[w, panelThickness, d]} />
       </mesh>
-      <mesh material={mat} position={[0, 0, -de / 2]}>
-        <boxGeometry args={[w, h, 0.01]} />
+
+      <mesh material={material} position={[0, 0, -d / 2]} castShadow receiveShadow>
+        <boxGeometry args={[w, h, panelThickness]} />
       </mesh>
-      <mesh material={mat} position={[0, 0, de / 2]}>
-        <boxGeometry args={[w, h, 0.01]} />
+      <mesh material={material} position={[0, 0, d / 2]} castShadow receiveShadow>
+        <boxGeometry args={[w, h, panelThickness]} />
       </mesh>
-      <mesh material={mat} position={[-w / 2, 0, 0]}>
-        <boxGeometry args={[0.01, h, de]} />
+      <mesh material={material} position={[-w / 2, 0, 0]} castShadow receiveShadow>
+        <boxGeometry args={[panelThickness, h, d]} />
       </mesh>
-      <mesh material={mat} position={[w / 2, 0, 0]}>
-        <boxGeometry args={[0.01, h, de]} />
+      <mesh material={material} position={[w / 2, 0, 0]} castShadow receiveShadow>
+        <boxGeometry args={[panelThickness, h, d]} />
       </mesh>
-      {/* Hinged lid */}
-      <group position={[0, h / 2, -de / 2]} rotation={[-lidAngle, 0, 0]}>
-        <mesh material={mat} position={[0, 0, de / 2]}>
-          <boxGeometry args={[w, 0.01, de]} />
+
+      <group position={[0, h / 2, -d / 2]} rotation={[-lidAngle, 0, 0]}>
+        <mesh material={material} position={[0, 0, d / 2]} castShadow receiveShadow>
+          <boxGeometry args={[w, panelThickness, d]} />
         </mesh>
       </group>
     </group>
