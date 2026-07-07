@@ -1,5 +1,5 @@
-import { Suspense, useEffect, useState } from "react";
-import { useGLTF } from "@react-three/drei";
+import { Component, Suspense, useMemo, type ErrorInfo, type ReactNode } from "react";
+import { Html, useGLTF } from "@react-three/drei";
 import * as THREE from "three";
 import type { NormalizedPackagingModel } from "@/integrations/boxcraft/types";
 
@@ -8,46 +8,85 @@ interface Props {
   onFail: () => void;
 }
 
-/**
- * Strategy A — attempt to load a GLB from resolved URL. On failure the
- * caller downgrades to knife-rig.
- */
-export function GltfModelBuilder(props: Props) {
+interface BoundaryProps {
+  resetKey: string;
+  onFail: () => void;
+  children: ReactNode;
+}
+
+interface BoundaryState {
+  failed: boolean;
+}
+
+class GltfErrorBoundary extends Component<BoundaryProps, BoundaryState> {
+  state: BoundaryState = { failed: false };
+
+  static getDerivedStateFromError(): BoundaryState {
+    return { failed: true };
+  }
+
+  componentDidCatch(error: unknown, info: ErrorInfo) {
+    console.error("[ShapeWeaver] GLB loading failed; using fallback geometry", error, info);
+    this.props.onFail();
+  }
+
+  componentDidUpdate(previousProps: BoundaryProps) {
+    if (previousProps.resetKey !== this.props.resetKey && this.state.failed) {
+      this.setState({ failed: false });
+    }
+  }
+
+  render() {
+    return this.state.failed ? null : this.props.children;
+  }
+}
+
+/** Attempts the source GLB and cleanly downgrades when CDN/CORS/404 fails. */
+export function GltfModelBuilder({ model, onFail }: Props) {
+  const url = model.gltf?.url;
+  if (!url) return null;
+
   return (
-    <Suspense fallback={null}>
-      <GltfInner {...props} />
-    </Suspense>
+    <GltfErrorBoundary resetKey={url} onFail={onFail}>
+      <Suspense
+        fallback={
+          <Html center>
+            <div className="rounded-md bg-black/70 px-3 py-2 text-xs text-white">
+              Loading 3D model…
+            </div>
+          </Html>
+        }
+      >
+        <GltfInner url={url} />
+      </Suspense>
+    </GltfErrorBoundary>
   );
 }
 
-function GltfInner({ model, onFail }: Props) {
-  const [failed, setFailed] = useState(false);
-  useEffect(() => {
-    if (!model.gltf?.url) {
-      setFailed(true);
-      onFail();
-    }
-  }, [model.gltf?.url, onFail]);
+function GltfInner({ url }: { url: string }) {
+  const gltf = useGLTF(url) as unknown as { scene: THREE.Group };
 
-  if (failed || !model.gltf?.url) return null;
+  const scene = useMemo(() => {
+    const clone = gltf.scene.clone(true);
+    clone.updateMatrixWorld(true);
 
-  try {
-    const gltf = useGLTF(model.gltf.url) as unknown as { scene: THREE.Group };
-    const scene = gltf.scene.clone(true);
-    // Fit into ~2 units
-    const box = new THREE.Box3().setFromObject(scene);
-    const size = new THREE.Vector3();
-    box.getSize(size);
-    const maxDim = Math.max(size.x, size.y, size.z) || 1;
-    const scale = 2 / maxDim;
-    scene.scale.setScalar(scale);
-    const center = new THREE.Vector3();
-    box.getCenter(center).multiplyScalar(scale);
-    scene.position.sub(center);
-    return <primitive object={scene} />;
-  } catch {
-    setFailed(true);
-    onFail();
-    return null;
-  }
+    const bounds = new THREE.Box3().setFromObject(clone);
+    const size = bounds.getSize(new THREE.Vector3());
+    const center = bounds.getCenter(new THREE.Vector3());
+    const maxDimension = Math.max(size.x, size.y, size.z, 0.001);
+    const scale = 2 / maxDimension;
+
+    clone.scale.setScalar(scale);
+    clone.position.copy(center.multiplyScalar(-scale));
+    clone.traverse((child) => {
+      if (child instanceof THREE.Mesh) {
+        child.castShadow = true;
+        child.receiveShadow = true;
+      }
+    });
+
+    return clone;
+  }, [gltf.scene]);
+
+  return <primitive object={scene} />;
 }
