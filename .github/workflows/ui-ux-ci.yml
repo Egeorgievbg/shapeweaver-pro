@@ -19,9 +19,11 @@ jobs:
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
       - run: bun run build
-      - name: Check formatting
+      - name: List formatting differences
+        shell: bash
         run: |
-          bunx prettier --check \
+          set +e
+          bunx prettier --list-different \
             src/components/admin/AdminAuthGate.tsx \
             src/components/admin/AdminControlCenter.tsx \
             src/components/catalog/CatalogView.tsx \
@@ -46,7 +48,22 @@ jobs:
             src/stores/persistence.ts \
             src/studio.css \
             vite.config.ts \
-            .github/workflows/ui-ux-ci.yml
+            .github/workflows/ui-ux-ci.yml > prettier-differences.txt
+          status=$?
+          echo "$status" > prettier-status.txt
+          cat prettier-differences.txt
+          exit 0
+      - name: Upload formatting report
+        uses: actions/upload-artifact@v4
+        with:
+          name: bilingual-admin-format-report
+          path: |
+            prettier-differences.txt
+            prettier-status.txt
+          retention-days: 2
+      - name: Enforce formatting
+        shell: bash
+        run: test "$(cat prettier-status.txt)" = "0"
       - name: Lint changed application scope
         run: |
           bunx eslint \
