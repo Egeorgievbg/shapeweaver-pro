@@ -1,0 +1,64 @@
+name: Format UI UX branch
+
+on:
+  push:
+    branches: [agent/pacdora-level-ui-ux]
+
+permissions:
+  contents: write
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/pacdora-level-ui-ux
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - name: Format redesigned UI files
+        run: |
+          bunx prettier --write \
+            src/components/catalog/CatalogView.tsx \
+            src/components/dieline/DielineEditor.tsx \
+            src/components/shell/AppHeader.tsx \
+            src/components/studio/StudioWorkspace.tsx \
+            src/routes/__root.tsx \
+            src/routes/library.tsx \
+            'src/routes/studio.$productId.tsx' \
+            src/studio.css \
+            .github/workflows/ui-ux-ci.yml \
+            .github/workflows/format-ui-ux-branch.yml
+      - name: Fix simple lint issues
+        run: |
+          bunx eslint --fix \
+            src/components/catalog/CatalogView.tsx \
+            src/components/dieline/DielineEditor.tsx \
+            src/components/shell/AppHeader.tsx \
+            src/components/studio/StudioWorkspace.tsx \
+            src/routes/__root.tsx \
+            src/routes/library.tsx \
+            'src/routes/studio.$productId.tsx'
+      - name: Commit formatting
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo "No formatting changes required"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            src/components/catalog/CatalogView.tsx \
+            src/components/dieline/DielineEditor.tsx \
+            src/components/shell/AppHeader.tsx \
+            src/components/studio/StudioWorkspace.tsx \
+            src/routes/__root.tsx \
+            src/routes/library.tsx \
+            'src/routes/studio.$productId.tsx' \
+            src/studio.css \
+            .github/workflows/ui-ux-ci.yml \
+            .github/workflows/format-ui-ux-branch.yml
+          git commit -m "style: format UI UX redesign"
+          git push origin HEAD:agent/pacdora-level-ui-ux
