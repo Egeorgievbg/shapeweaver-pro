@@ -22,6 +22,7 @@ jobs:
       - name: Check formatting
         run: |
           bunx prettier --check \
+            src/components/admin/AdminAuthGate.tsx \
             src/components/admin/AdminControlCenter.tsx \
             src/components/catalog/CatalogView.tsx \
             src/components/dieline/DielineEditor.tsx \
@@ -31,6 +32,7 @@ jobs:
             src/integrations/admin/client.ts \
             src/integrations/boxcraft/client.ts \
             src/integrations/boxcraft/errors.ts \
+            src/lib/env.ts \
             src/lib/i18n.ts \
             src/routes/__root.tsx \
             src/routes/admin.data.tsx \
@@ -38,6 +40,7 @@ jobs:
             src/routes/index.tsx \
             src/routes/library.tsx \
             'src/routes/studio.$productId.tsx' \
+            src/server.ts \
             src/stores/persistence.ts \
             src/studio.css \
             vite.config.ts \
@@ -45,6 +48,7 @@ jobs:
       - name: Lint changed application scope
         run: |
           bunx eslint \
+            src/components/admin/AdminAuthGate.tsx \
             src/components/admin/AdminControlCenter.tsx \
             src/components/catalog/CatalogView.tsx \
             src/components/dieline/DielineEditor.tsx \
@@ -54,6 +58,7 @@ jobs:
             src/integrations/admin/client.ts \
             src/integrations/boxcraft/client.ts \
             src/integrations/boxcraft/errors.ts \
+            src/lib/env.ts \
             src/lib/i18n.ts \
             src/routes/__root.tsx \
             src/routes/admin.data.tsx \
@@ -61,5 +66,6 @@ jobs:
             src/routes/index.tsx \
             src/routes/library.tsx \
             'src/routes/studio.$productId.tsx' \
+            src/server.ts \
             src/stores/persistence.ts \
             vite.config.ts
