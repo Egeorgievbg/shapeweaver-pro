@@ -36,16 +36,22 @@ export class ApiUnavailableError extends BoxcraftError {
 
 export class ProductNotFoundError extends BoxcraftError {
   constructor(productId: string) {
-    super("product_not_found", `Product "${productId}" was not found.`, { status: 404 });
+    super("product_not_found", `Product "${productId}" was not found.`, {
+      status: 404,
+    });
     this.name = "ProductNotFoundError";
   }
 }
 
 export class PayloadIncompleteError extends BoxcraftError {
   constructor(missing: string[]) {
-    super("payload_incomplete", `Payload package is missing: ${missing.join(", ")}`, {
-      details: { missing },
-    });
+    super(
+      "payload_incomplete",
+      `Payload package is missing: ${missing.join(", ")}`,
+      {
+        details: { missing },
+      },
+    );
     this.name = "PayloadIncompleteError";
   }
 }
