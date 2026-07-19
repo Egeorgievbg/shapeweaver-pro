@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { KeyRound, Loader2, LockKeyhole, LogOut, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
@@ -64,6 +64,23 @@ export function AdminAuthGate() {
     if (accessKey.trim()) login.mutate();
   };
 
+  useEffect(() => {
+    const applyDiagnosticsLabel = () => {
+      const label = locale === "bg" ? "Техническа диагностика" : "Technical diagnostics";
+      document.querySelectorAll("summary").forEach((summary) => {
+        const value = summary.textContent?.trim();
+        if (value === "Technical diagnostics" || value === "Техническа диагностика") {
+          summary.textContent = label;
+        }
+      });
+    };
+
+    applyDiagnosticsLabel();
+    const observer = new MutationObserver(applyDiagnosticsLabel);
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, [locale]);
+
   if (session.isLoading) {
     return (
       <div
@@ -108,7 +125,7 @@ export function AdminAuthGate() {
           </h1>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
             {locale === "bg"
-              ? "Въведете сървърно конфигурирания администраторски ключ. Той се изпраща само към защитения gateway от същия домейн и не се запазва в браузъра."
+              ? "Въведете сървърно конфигурирания администраторски ключ. Той се изпраща само към защитения шлюз от същия домейн и не се запазва в браузъра."
               : "Enter the server-configured administrator access key. It is sent only to the same-origin gateway and is never stored in the browser."}
           </p>
 
