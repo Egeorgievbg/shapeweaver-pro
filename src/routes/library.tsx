@@ -14,7 +14,8 @@ export const Route = createFileRoute("/library")({
       { property: "og:title", content: "Packaging structure library — GPTSBOXES" },
       {
         property: "og:description",
-        content: "Choose a packaging structure and configure dimensions, artwork, materials and finishes.",
+        content:
+          "Choose a packaging structure and configure dimensions, artwork, materials and finishes.",
       },
     ],
   }),

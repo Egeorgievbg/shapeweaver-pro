@@ -100,7 +100,11 @@ export function StudioWorkspace() {
 
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z") {
         event.preventDefault();
-        event.shiftKey ? redo() : undo();
+        if (event.shiftKey) {
+          redo();
+        } else {
+          undo();
+        }
         return;
       }
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "y") {
@@ -199,8 +203,15 @@ export function StudioWorkspace() {
           ))}
         </div>
 
-        <TopbarButton icon={<Save className="h-4 w-4" />} label="Save project" onClick={handleSave} />
-        <button onClick={() => setExportOpen(true)} className="studio-secondary-button hidden sm:inline-flex">
+        <TopbarButton
+          icon={<Save className="h-4 w-4" />}
+          label="Save project"
+          onClick={handleSave}
+        />
+        <button
+          onClick={() => setExportOpen(true)}
+          className="studio-secondary-button hidden sm:inline-flex"
+        >
           <Download className="h-4 w-4" /> Export
         </button>
         <button onClick={() => setQuoteOpen(true)} className="studio-primary-button">
@@ -226,7 +237,10 @@ export function StudioWorkspace() {
               {model.warnings.slice(0, 3).join(" · ")}
             </span>
           </div>
-          <button onClick={() => openTab("product")} className="shrink-0 font-medium underline underline-offset-4">
+          <button
+            onClick={() => openTab("product")}
+            className="shrink-0 font-medium underline underline-offset-4"
+          >
             Review
           </button>
         </div>
@@ -289,7 +303,9 @@ export function StudioWorkspace() {
 
           {selectedPanel && (
             <div className="pointer-events-none absolute left-3 top-3 z-20 hidden rounded-lg border border-gold/30 bg-panel/90 px-3 py-2 shadow-sm backdrop-blur md:block">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-gold">Selected panel</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-gold">
+                Selected panel
+              </p>
               <p className="mt-0.5 max-w-48 truncate text-xs font-medium">{selectedPanel.name}</p>
             </div>
           )}
@@ -353,7 +369,9 @@ export function StudioWorkspace() {
             <div className="mx-auto mt-2 h-1 w-10 rounded-full bg-muted-foreground/30" />
             <div className="flex items-center justify-between border-b border-panel-border px-4 py-3">
               <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">Configure</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                  Configure
+                </p>
                 <p className="text-sm font-semibold">
                   {STUDIO_TABS.find(([key]) => key === activeTab)?.[2]}
                 </p>
@@ -431,7 +449,11 @@ function ProductPanel({ editorMode }: { editorMode: EditorMode }) {
       <div className="overflow-hidden rounded-xl border border-panel-border bg-surface-2">
         <div className="aspect-[16/10] bg-viewport p-4">
           {model.thumbnailUrl ? (
-            <img src={model.thumbnailUrl} alt={model.name} className="h-full w-full object-contain" />
+            <img
+              src={model.thumbnailUrl}
+              alt={model.name}
+              className="h-full w-full object-contain"
+            />
           ) : (
             <div className="flex h-full items-center justify-center text-muted-foreground">
               <Box className="h-10 w-10" />
@@ -669,7 +691,8 @@ function MaterialPanel() {
       {getPreset(material.presetId) && (
         <div className="rounded-xl border border-success/20 bg-success/5 p-3 text-xs leading-5 text-muted-foreground">
           <PackageCheck className="mr-2 inline h-4 w-4 text-success" />
-          Active substrate: <strong className="text-foreground">{getPreset(material.presetId)!.name}</strong>
+          Active substrate:{" "}
+          <strong className="text-foreground">{getPreset(material.presetId)!.name}</strong>
         </div>
       )}
     </div>
@@ -745,7 +768,10 @@ function ArtworkPanel() {
             .slice()
             .sort((a, b) => b.order - a.order)
             .map((layer) => (
-              <div key={layer.id} className="rounded-xl border border-panel-border bg-surface-2 p-3">
+              <div
+                key={layer.id}
+                className="rounded-xl border border-panel-border bg-surface-2 p-3"
+              >
                 <div className="flex items-center gap-2">
                   <img
                     src={layer.dataUrl}
@@ -856,7 +882,12 @@ function FinishesPanel() {
   const finishes = [
     { id: "none", name: "No finish", note: "Natural substrate response", icon: Box },
     { id: "matte", name: "Matte lamination", note: "Soft diffuse protection", icon: WandSparkles },
-    { id: "gloss", name: "Gloss lamination", note: "High reflection and colour depth", icon: Sparkles },
+    {
+      id: "gloss",
+      name: "Gloss lamination",
+      note: "High reflection and colour depth",
+      icon: Sparkles,
+    },
     { id: "spot-uv", name: "Selective UV", note: "Gloss highlight on a mask", icon: MonitorUp },
     { id: "gold-foil", name: "Gold foil", note: "Metallic hot-stamped layer", icon: Sparkles },
     { id: "silver-foil", name: "Silver foil", note: "Cool metallic layer", icon: Sparkles },
@@ -1061,7 +1092,9 @@ function ContextInspector({
                       <img src={layer.dataUrl} alt="" className="h-8 w-8 rounded object-cover" />
                       <div className="min-w-0 flex-1">
                         <p className="truncate text-xs font-medium">{layer.name}</p>
-                        <p className="font-mono text-[9px] uppercase text-muted-foreground">{layer.side}</p>
+                        <p className="font-mono text-[9px] uppercase text-muted-foreground">
+                          {layer.side}
+                        </p>
                       </div>
                     </div>
                   ))}
@@ -1140,7 +1173,8 @@ function ContextInspector({
             <div>
               <p className="text-sm font-semibold">Quote-ready configuration</p>
               <p className="mt-1 text-xs leading-5 text-muted-foreground">
-                The quote includes the structure, dimensions, material, finish, artwork manifest and preview state.
+                The quote includes the structure, dimensions, material, finish, artwork manifest and
+                preview state.
               </p>
             </div>
           </div>
@@ -1150,7 +1184,11 @@ function ContextInspector({
           <Section title="Technical metadata">
             <SummaryRow label="Source ID" value={model.sourceId} mono />
             <SummaryRow label="Geometry" value={model.geometryStrategy} mono />
-            <SummaryRow label="Panels / folds" value={`${model.panels.length} / ${model.folds.length}`} mono />
+            <SummaryRow
+              label="Panels / folds"
+              value={`${model.panels.length} / ${model.folds.length}`}
+              mono
+            />
             <SummaryRow label="Warnings" value={String(model.warnings.length)} mono />
           </Section>
         )}
@@ -1308,7 +1346,9 @@ function Metric({
 }) {
   return (
     <div className="rounded-lg border border-panel-border bg-surface-2 p-2.5">
-      <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">{label}</p>
+      <p className="text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+        {label}
+      </p>
       <p
         className={cn(
           "mt-1 truncate text-xs font-semibold",
@@ -1558,7 +1598,9 @@ function SummaryRow({
   return (
     <div className="flex items-start justify-between gap-3">
       <dt className="text-muted-foreground">{label}</dt>
-      <dd className={cn("max-w-[62%] text-right font-medium", mono && "font-mono text-[10px]")}>{value}</dd>
+      <dd className={cn("max-w-[62%] text-right font-medium", mono && "font-mono text-[10px]")}>
+        {value}
+      </dd>
     </div>
   );
 }

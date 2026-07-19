@@ -19,7 +19,9 @@ function NotFoundComponent() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
-        <p className="font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground">Error 404</p>
+        <p className="font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground">
+          Error 404
+        </p>
         <h1 className="mt-3 text-4xl font-semibold text-foreground">Route not found</h1>
         <p className="mt-3 text-sm text-muted-foreground">
           The page you were looking for isn't part of the studio.
@@ -40,7 +42,9 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-lg text-center">
-        <p className="font-mono text-xs uppercase tracking-[0.2em] text-destructive">Runtime error</p>
+        <p className="font-mono text-xs uppercase tracking-[0.2em] text-destructive">
+          Runtime error
+        </p>
         <h1 className="mt-3 text-2xl font-semibold">Something interrupted the studio</h1>
         <p className="mt-3 text-sm text-muted-foreground">
           {error.message || "An unexpected error occurred."}

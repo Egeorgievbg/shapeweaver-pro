@@ -10,7 +10,10 @@ export const Route = createFileRoute("/studio/$productId")({
   head: ({ params }) => ({
     meta: [
       { title: `Studio · ${params.productId} — GPTSBOXES` },
-      { name: "description", content: `Configure packaging template ${params.productId} in the 3D studio.` },
+      {
+        name: "description",
+        content: `Configure packaging template ${params.productId} in the 3D studio.`,
+      },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -40,7 +43,9 @@ function StudioProductPage() {
             </span>
             <div>
               <p className="text-sm font-semibold">Preparing packaging studio</p>
-              <p className="mt-0.5 font-mono text-[10px] text-muted-foreground">source-{productId}</p>
+              <p className="mt-0.5 font-mono text-[10px] text-muted-foreground">
+                source-{productId}
+              </p>
             </div>
           </div>
           <div className="mt-5 space-y-3 text-xs">
@@ -65,7 +70,9 @@ function StudioProductPage() {
             <AlertTriangle className="h-5 w-5" />
           </span>
           <h2 className="mt-4 text-lg font-semibold">The structure could not be loaded</h2>
-          <p className="mt-2 text-sm leading-6 text-muted-foreground">{(query.error as Error).message}</p>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">
+            {(query.error as Error).message}
+          </p>
           <div className="mt-6 flex flex-wrap justify-center gap-2">
             <button onClick={() => query.refetch()} className="studio-primary-button">
               Retry structure
@@ -93,7 +100,11 @@ function LoadStep({ complete, label }: { complete: boolean; label: string }) {
             : "flex h-5 w-5 items-center justify-center rounded-full border border-panel-border text-muted-foreground"
         }
       >
-        {complete ? <Check className="h-3 w-3" /> : <span className="h-1.5 w-1.5 rounded-full bg-current" />}
+        {complete ? (
+          <Check className="h-3 w-3" />
+        ) : (
+          <span className="h-1.5 w-1.5 rounded-full bg-current" />
+        )}
       </span>
       <span className={complete ? "text-foreground" : "text-muted-foreground"}>{label}</span>
     </div>

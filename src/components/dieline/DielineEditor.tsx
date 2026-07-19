@@ -32,7 +32,8 @@ export function DielineEditor() {
           <ScanLine className="mx-auto h-8 w-8 text-muted-foreground" />
           <p className="mt-3 text-sm font-semibold">No production dieline available</p>
           <p className="mt-1 text-xs leading-5 text-muted-foreground">
-            The 3D fallback remains available, but this structure has no validated cut and fold paths.
+            The 3D fallback remains available, but this structure has no validated cut and fold
+            paths.
           </p>
         </div>
       </div>
@@ -113,7 +114,9 @@ export function DielineEditor() {
       </div>
 
       <div className="absolute left-3 top-3 z-10 hidden rounded-lg border border-panel-border bg-panel/90 px-3 py-2 shadow-sm backdrop-blur md:block">
-        <p className="text-[9px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">Dieline canvas</p>
+        <p className="text-[9px] font-semibold uppercase tracking-[0.15em] text-muted-foreground">
+          Dieline canvas
+        </p>
         <p className="mt-1 font-mono text-[10px]">
           {dieline.totalX.toFixed(1)} × {dieline.totalY.toFixed(1)} mm
         </p>
@@ -121,7 +124,9 @@ export function DielineEditor() {
 
       {selectedPanel && (
         <div className="absolute right-3 top-3 z-10 hidden max-w-56 rounded-lg border border-gold/25 bg-panel/90 px-3 py-2 shadow-sm backdrop-blur md:block">
-          <p className="text-[9px] font-semibold uppercase tracking-[0.15em] text-gold">Selected panel</p>
+          <p className="text-[9px] font-semibold uppercase tracking-[0.15em] text-gold">
+            Selected panel
+          </p>
           <p className="mt-1 truncate text-xs font-semibold">{selectedPanel.name}</p>
           <p className="mt-1 font-mono text-[9px] text-muted-foreground">
             {selectedPanel.bbox.w.toFixed(1)} × {selectedPanel.bbox.h.toFixed(1)} mm
@@ -132,7 +137,10 @@ export function DielineEditor() {
       <svg
         viewBox={viewBox}
         preserveAspectRatio="xMidYMid meet"
-        className={cn("h-full w-full select-none", dragRef.current ? "cursor-grabbing" : "cursor-crosshair")}
+        className={cn(
+          "h-full w-full select-none",
+          dragRef.current ? "cursor-grabbing" : "cursor-crosshair",
+        )}
         onWheel={onWheel}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
@@ -140,7 +148,10 @@ export function DielineEditor() {
         onPointerCancel={stopDrag}
         onPointerLeave={stopDrag}
         onClick={() => selectPanel(null)}
-        style={{ transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`, transformOrigin: "center" }}
+        style={{
+          transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
+          transformOrigin: "center",
+        }}
       >
         {showBleed && dieline.bleedsPath && (
           <path
@@ -290,7 +301,10 @@ function LayerToggle({
     >
       <span
         className="h-0.5 w-3"
-        style={{ background: dashed ? undefined : color, borderTop: dashed ? `2px dashed ${color}` : undefined }}
+        style={{
+          background: dashed ? undefined : color,
+          borderTop: dashed ? `2px dashed ${color}` : undefined,
+        }}
       />
       {label}
     </button>
@@ -327,7 +341,10 @@ function Legend({ color, label, dashed }: { color: string; label: string; dashed
     <span className="flex items-center gap-1.5">
       <span
         className="h-0.5 w-4"
-        style={{ background: dashed ? undefined : color, borderTop: dashed ? `2px dashed ${color}` : undefined }}
+        style={{
+          background: dashed ? undefined : color,
+          borderTop: dashed ? `2px dashed ${color}` : undefined,
+        }}
       />
       <span className="font-mono text-[9px] uppercase text-muted-foreground">{label}</span>
     </span>

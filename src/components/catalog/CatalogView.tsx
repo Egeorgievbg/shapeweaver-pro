@@ -46,8 +46,13 @@ export function CatalogView() {
 
   const total = products.data?.pagination.total ?? 0;
   const pageCount = Math.ceil(total / PAGE_SIZE) || 1;
-  const activeFilters = [family, category, material, q, line !== "all" ? line : undefined].filter(Boolean).length;
-  const featuredFamilies = useMemo(() => (relations.data?.families ?? []).slice(0, 6), [relations.data?.families]);
+  const activeFilters = [family, category, material, q, line !== "all" ? line : undefined].filter(
+    Boolean,
+  ).length;
+  const featuredFamilies = useMemo(
+    () => (relations.data?.families ?? []).slice(0, 6),
+    [relations.data?.families],
+  );
 
   const visibleItems = useMemo(() => {
     const items = products.data?.items ?? [];
@@ -72,7 +77,11 @@ export function CatalogView() {
   const toggleFavorite = (id: string) => {
     setFavorites((current) => {
       const next = new Set(current);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
       return next;
     });
   };
@@ -89,18 +98,22 @@ export function CatalogView() {
               Choose a structure. Configure it in one connected workflow.
             </h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
-              Search, filter and open a production-linked packaging template. Dimensions, dieline, artwork,
-              3D and quote data remain inside one project.
+              Search, filter and open a production-linked packaging template. Dimensions, dieline,
+              artwork, 3D and quote data remain inside one project.
             </p>
           </div>
           <div className="hidden items-center gap-3 md:flex">
             <div className="rounded-xl border border-panel-border bg-surface-2 px-4 py-3 text-center">
               <p className="text-xl font-semibold">{total.toLocaleString()}</p>
-              <p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Structures</p>
+              <p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+                Structures
+              </p>
             </div>
             <div className="rounded-xl border border-panel-border bg-surface-2 px-4 py-3 text-center">
               <p className="text-xl font-semibold">2D + 3D</p>
-              <p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">Linked editor</p>
+              <p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+                Linked editor
+              </p>
             </div>
           </div>
         </div>
@@ -134,7 +147,9 @@ export function CatalogView() {
         <section>
           <div className="mb-3 flex items-center justify-between">
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-gold">Browse by construction</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-gold">
+                Browse by construction
+              </p>
               <h2 className="mt-1 text-base font-semibold">Popular packaging families</h2>
             </div>
           </div>
@@ -154,7 +169,11 @@ export function CatalogView() {
                 )}
               >
                 <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-surface-2 text-muted-foreground group-hover:text-gold">
-                  {index % 2 === 0 ? <Boxes className="h-4 w-4" /> : <Grid2x2 className="h-4 w-4" />}
+                  {index % 2 === 0 ? (
+                    <Boxes className="h-4 w-4" />
+                  ) : (
+                    <Grid2x2 className="h-4 w-4" />
+                  )}
                 </span>
                 <p className="mt-3 truncate text-xs font-semibold">{item.name}</p>
                 <p className="mt-1 font-mono text-[9px] text-muted-foreground">
@@ -171,7 +190,8 @@ export function CatalogView() {
           onClick={() => setFiltersOpen(true)}
           className="studio-secondary-button w-full justify-center lg:hidden"
         >
-          <SlidersHorizontal className="h-4 w-4" /> Filters {activeFilters > 0 ? `(${activeFilters})` : ""}
+          <SlidersHorizontal className="h-4 w-4" /> Filters{" "}
+          {activeFilters > 0 ? `(${activeFilters})` : ""}
         </button>
 
         <aside className="hidden h-fit overflow-hidden rounded-2xl border border-panel-border bg-panel lg:block">
@@ -205,7 +225,9 @@ export function CatalogView() {
         <div className="min-w-0">
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Results</p>
+              <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+                Results
+              </p>
               <p className="mt-1 text-sm font-semibold">
                 {products.isLoading
                   ? "Loading structures…"
@@ -220,7 +242,9 @@ export function CatalogView() {
                   onClick={() => setDensity("comfortable")}
                   className={cn(
                     "rounded-md p-1.5",
-                    density === "comfortable" ? "bg-accent text-foreground" : "text-muted-foreground",
+                    density === "comfortable"
+                      ? "bg-accent text-foreground"
+                      : "text-muted-foreground",
                   )}
                   aria-label="Comfortable grid"
                 >
@@ -296,7 +320,9 @@ export function CatalogView() {
           <div className="absolute inset-x-0 bottom-0 max-h-[85dvh] overflow-y-auto rounded-t-2xl border-t border-panel-border bg-panel shadow-2xl">
             <div className="flex items-center justify-between border-b border-panel-border px-4 py-3">
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-gold">Library</p>
+                <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-gold">
+                  Library
+                </p>
                 <p className="text-sm font-semibold">Filters</p>
               </div>
               <button onClick={() => setFiltersOpen(false)} className="studio-icon-button">
@@ -378,7 +404,9 @@ function FilterSidebar({
     <div>
       <div className="flex items-center justify-between border-b border-panel-border px-4 py-3">
         <div>
-          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">Refine</p>
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
+            Refine
+          </p>
           <p className="text-sm font-semibold">Structure filters</p>
         </div>
         {activeFilters > 0 && (
@@ -414,9 +442,24 @@ function FilterSidebar({
             ))}
           </div>
         </div>
-        <FilterGroup label="Family" value={family} onChange={setFamily} items={relations?.families ?? []} />
-        <FilterGroup label="Category" value={category} onChange={setCategory} items={relations?.categories ?? []} />
-        <FilterGroup label="Material" value={material} onChange={setMaterial} items={relations?.materials ?? []} />
+        <FilterGroup
+          label="Family"
+          value={family}
+          onChange={setFamily}
+          items={relations?.families ?? []}
+        />
+        <FilterGroup
+          label="Category"
+          value={category}
+          onChange={setCategory}
+          items={relations?.categories ?? []}
+        />
+        <FilterGroup
+          label="Material"
+          value={material}
+          onChange={setMaterial}
+          items={relations?.materials ?? []}
+        />
       </div>
     </div>
   );
@@ -540,7 +583,8 @@ function ProductCard({
         )}
         {card.dimensions && (
           <p className="mt-2 font-mono text-[10px] text-muted-foreground">
-            {card.dimensions.length} × {card.dimensions.width} × {card.dimensions.height} {card.dimensions.unit}
+            {card.dimensions.length} × {card.dimensions.width} × {card.dimensions.height}{" "}
+            {card.dimensions.unit}
           </p>
         )}
         <div className="mt-4 flex items-center justify-between gap-2">

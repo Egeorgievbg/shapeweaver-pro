@@ -16,7 +16,10 @@
   justify-content: center;
   border-radius: 0.5rem;
   color: var(--color-muted-foreground);
-  transition: background-color 150ms ease, color 150ms ease, transform 150ms ease;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease,
+    transform 150ms ease;
 }
 
 .studio-icon-button:hover {
@@ -39,7 +42,11 @@
   font-size: 0.75rem;
   font-weight: 650;
   line-height: 1;
-  transition: transform 150ms ease, opacity 150ms ease, background-color 150ms ease, border-color 150ms ease;
+  transition:
+    transform 150ms ease,
+    opacity 150ms ease,
+    background-color 150ms ease,
+    border-color 150ms ease;
 }
 
 .studio-primary-button {
@@ -77,7 +84,10 @@
   font-size: 0.58rem;
   font-weight: 600;
   letter-spacing: 0.01em;
-  transition: background-color 150ms ease, color 150ms ease, transform 150ms ease;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease,
+    transform 150ms ease;
 }
 
 .studio-tool-button:hover {
