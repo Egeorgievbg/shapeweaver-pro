@@ -1,0 +1,47 @@
+name: Real data formatting report
+
+on:
+  push:
+    branches: [feature/real-data-manifest-export-pipeline]
+  pull_request:
+    branches: [feature/bg-en-admin-control-center]
+
+permissions:
+  contents: read
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - name: List different files
+        shell: bash
+        run: |
+          set +e
+          bunx prettier --list-different \
+            src/components/export/ExportDialog.tsx \
+            src/components/viewer/Viewport3D.tsx \
+            src/features/configurator/export/nativeExporters.ts \
+            src/features/configurator/export/viewportRegistry.ts \
+            src/features/configurator/geometry/AnimationEvaluator.ts \
+            src/features/configurator/geometry/KnifeRigBuilder.tsx \
+            src/features/configurator/geometry/ManifestGeometryResolver.tsx \
+            src/features/configurator/manifest/adapter.ts \
+            src/features/configurator/manifest/types.ts \
+            src/features/configurator/manifest/legacyCompiler.ts \
+            src/features/configurator/manifest/legacy/animationTools.ts \
+            src/features/configurator/manifest/legacy/layerTools.ts \
+            src/features/configurator/manifest/legacy/pathTools.ts \
+            src/integrations/boxcraft/endpoints.ts \
+            src/integrations/boxcraft/index.ts \
+            src/lib/i18n-overrides.ts \
+            docs/SOURCE_OF_TRUTH.md \
+            .github/workflows/real-data-pipeline-ci.yml > format-differences.txt
+          exit 0
+      - uses: actions/upload-artifact@v4
+        with:
+          name: real-data-format-differences
+          path: format-differences.txt
+          retention-days: 2
