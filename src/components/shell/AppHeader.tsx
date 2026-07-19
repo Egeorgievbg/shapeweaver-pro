@@ -1,6 +1,7 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Boxes, Languages, Moon, Search, Sun } from "lucide-react";
 import { useTheme } from "@/hooks/use-theme";
+import "@/lib/i18n-overrides";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
