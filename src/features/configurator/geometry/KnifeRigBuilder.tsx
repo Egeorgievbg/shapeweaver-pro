@@ -1,6 +1,6 @@
 import * as THREE from "three";
-import { useEffect, useMemo, useRef } from "react";
-import type { NormalizedPackagingModel } from "@/integrations/boxcraft/types";
+import { useEffect, useMemo } from "react";
+import type { NormalizedPackagingModel, PackagingPanel } from "@/integrations/boxcraft/types";
 import { buildFoldGraph, type FoldNode } from "./FoldGraph";
 import { buildPanelGeometry } from "./PanelGeometry";
 import { useConfiguratorStore } from "@/stores/configurator";
@@ -15,155 +15,250 @@ interface KnifeRigProps {
   onPanelClick: (id: string) => void;
 }
 
+type PanelGeometryMap = Map<string, ReturnType<typeof buildPanelGeometry>>;
+
 /**
  * Strategy B — renders the box from the knife dieline.
- * Each panel becomes an ExtrudeGeometry; children are parented under groups
- * that rotate around their fold hinges. The whole tree is centered and
- * scaled to unit size for the camera fit rig.
+ * Geometry remains in the canonical global dieline coordinate system. Each
+ * nested hinge converts its global pivot into the parent group's local origin,
+ * so multi-level folds accumulate correctly.
  */
 export function KnifeRigBuilder(props: KnifeRigProps) {
-  const foldProgress = useConfiguratorStore((s) => s.foldProgress);
-  const rootRef = useRef<THREE.Group>(null);
+  const foldProgress = useConfiguratorStore((state) => state.foldProgress);
 
-  const { root, panelGeometries, sceneScale, dielineSize } = useMemo(() => {
+  const { root, orphans, panelGeometries, sceneScale, dielineSize } = useMemo(() => {
     const graph = buildFoldGraph(props.model);
-    const dielineW = props.model.dieline?.totalX ?? 500;
-    const dielineH = props.model.dieline?.totalY ?? 500;
-    const thickness = props.model.dimensions.thickness ?? 1.5;
-    const geoms = new Map<string, ReturnType<typeof buildPanelGeometry>>();
-    if (graph) {
-      const walk = (n: FoldNode) => {
-        const g = buildPanelGeometry(n.panel, {
+    const dielineWidth = Math.max(props.model.dieline?.totalX ?? 0, 1);
+    const dielineHeight = Math.max(props.model.dieline?.totalY ?? 0, 1);
+    const thickness = Math.max(props.model.dimensions.thickness ?? 1.5, 0.05);
+    const geometries: PanelGeometryMap = new Map();
+
+    for (const panel of props.model.panels) {
+      geometries.set(
+        panel.id,
+        buildPanelGeometry(panel, {
           thickness,
-          dielineWidth: dielineW,
-          dielineHeight: dielineH,
-        });
-        geoms.set(n.panel.id, g);
-        n.children.forEach(walk);
-      };
-      walk(graph.root);
+          dielineWidth,
+          dielineHeight,
+        }),
+      );
     }
-    // Scale so largest side fits ~2 units in scene space
-    const maxDim = Math.max(dielineW, dielineH);
-    const scale = 2 / maxDim;
+
+    const maximumDimension = Math.max(dielineWidth, dielineHeight, 1);
     return {
       root: graph?.root,
-      panelGeometries: geoms,
-      sceneScale: scale,
-      dielineSize: { w: dielineW, h: dielineH },
+      orphans: graph?.orphans ?? props.model.panels,
+      panelGeometries: geometries,
+      sceneScale: 2 / maximumDimension,
+      dielineSize: { width: dielineWidth, height: dielineHeight },
     };
   }, [props.model]);
 
-  // Cleanup geometries on unmount / model change
+  useEffect(
+    () => () => {
+      panelGeometries.forEach((result) => result?.geometry.dispose());
+    },
+    [panelGeometries],
+  );
+
+  const material = useMemo(
+    () =>
+      new THREE.MeshStandardMaterial({
+        color: new THREE.Color(props.materialColor),
+        roughness: props.roughness,
+        metalness: props.metalness,
+        side: THREE.DoubleSide,
+      }),
+    [],
+  );
+
   useEffect(() => {
-    return () => {
-      panelGeometries.forEach((g) => g?.geometry.dispose());
-    };
-  }, [panelGeometries]);
+    material.color.set(props.materialColor);
+    material.roughness = props.roughness;
+    material.metalness = props.metalness;
+    material.map = props.artworkTexture;
+    material.needsUpdate = true;
+  }, [material, props.artworkTexture, props.materialColor, props.roughness, props.metalness]);
+
+  useEffect(() => () => material.dispose(), [material]);
 
   if (!root) return null;
 
   return (
     <group
-      ref={rootRef}
-      scale={sceneScale}
-      position={[-dielineSize.w / 2 * sceneScale, dielineSize.h / 2 * sceneScale, 0]}
-      // Flip Y so SVG down → Three up
-      onUpdate={(g) => g.scale.setY(-Math.abs(g.scale.y))}
+      scale={[sceneScale, -sceneScale, sceneScale]}
+      position={[
+        (-dielineSize.width / 2) * sceneScale,
+        (dielineSize.height / 2) * sceneScale,
+        0,
+      ]}
     >
       <PanelNode
         node={root}
+        parentOrigin={new THREE.Vector3(0, 0, 0)}
         geometries={panelGeometries}
         foldProgress={foldProgress}
-        artworkTexture={props.artworkTexture}
-        materialColor={props.materialColor}
-        roughness={props.roughness}
-        metalness={props.metalness}
+        material={material}
         selectedPanelId={props.selectedPanelId}
         onPanelClick={props.onPanelClick}
         isRoot
       />
+
+      {orphans.map((panel) => (
+        <FlatPanel
+          key={`orphan-${panel.id}`}
+          panel={panel}
+          geometry={panelGeometries.get(panel.id) ?? null}
+          material={material}
+          selected={props.selectedPanelId === panel.id}
+          onPanelClick={props.onPanelClick}
+        />
+      ))}
     </group>
   );
 }
 
 interface PanelNodeProps {
   node: FoldNode;
-  geometries: Map<string, ReturnType<typeof buildPanelGeometry>>;
+  parentOrigin: THREE.Vector3;
+  geometries: PanelGeometryMap;
   foldProgress: number;
-  artworkTexture: THREE.Texture | null;
-  materialColor: string;
-  roughness: number;
-  metalness: number;
+  material: THREE.Material;
   selectedPanelId: string | null;
   onPanelClick: (id: string) => void;
   isRoot?: boolean;
 }
 
 function PanelNode(props: PanelNodeProps) {
-  const { node, foldProgress } = props;
-  const groupRef = useRef<THREE.Group>(null);
-  const geo = props.geometries.get(node.panel.id) ?? null;
-  const isSelected = props.selectedPanelId === node.panel.id;
-
-  // Compute hinge transform for this node (relative to parent)
-  const { hingePivot, hingeAxis } = useMemo(() => {
-    if (!node.incomingFold) return { hingePivot: new THREE.Vector3(), hingeAxis: new THREE.Vector3(1, 0, 0) };
-    const f = node.incomingFold;
-    const mid = new THREE.Vector3((f.from[0] + f.to[0]) / 2, (f.from[1] + f.to[1]) / 2, 0);
-    const axis = new THREE.Vector3(f.to[0] - f.from[0], f.to[1] - f.from[1], 0).normalize();
-    return { hingePivot: mid, hingeAxis: axis };
-  }, [node.incomingFold]);
-
-  // Apply hinge rotation each frame based on foldProgress
-  useEffect(() => {
-    if (!groupRef.current) return;
-    if (!node.incomingFold) return;
-    const angle = foldProgress * (Math.PI / 2) * (node.incomingFold.direction ?? 1);
-    groupRef.current.setRotationFromAxisAngle(hingeAxis, angle);
-  }, [foldProgress, node.incomingFold, hingeAxis]);
-
-  const material = useMemo(() => {
-    const mat = new THREE.MeshStandardMaterial({
-      color: new THREE.Color(props.materialColor),
-      roughness: props.roughness,
-      metalness: props.metalness,
-      side: THREE.DoubleSide,
-    });
-    if (props.artworkTexture) {
-      mat.map = props.artworkTexture;
-      mat.needsUpdate = true;
+  const incomingFold = props.node.incomingFold;
+  const hinge = useMemo(() => {
+    if (!incomingFold) {
+      return {
+        globalPivot: new THREE.Vector3(0, 0, 0),
+        localPivot: new THREE.Vector3(0, 0, 0),
+        axis: new THREE.Vector3(1, 0, 0),
+        angle: 0,
+        quaternion: new THREE.Quaternion(),
+      };
     }
-    return mat;
-  }, [props.materialColor, props.roughness, props.metalness, props.artworkTexture]);
 
-  useEffect(() => () => material.dispose(), [material]);
+    const globalPivot = new THREE.Vector3(
+      (incomingFold.from[0] + incomingFold.to[0]) / 2,
+      (incomingFold.from[1] + incomingFold.to[1]) / 2,
+      0,
+    );
+    const localPivot = globalPivot.clone().sub(props.parentOrigin);
+    const axis = new THREE.Vector3(
+      incomingFold.to[0] - incomingFold.from[0],
+      incomingFold.to[1] - incomingFold.from[1],
+      0,
+    );
+    if (axis.lengthSq() < 1e-8) axis.set(1, 0, 0);
+    axis.normalize();
 
-  // Position mesh relative to hinge pivot
-  const meshOffset: [number, number, number] = node.incomingFold
-    ? [-hingePivot.x, -hingePivot.y, 0]
-    : [0, 0, 0];
+    const openAngle = incomingFold.openAngle ?? 0;
+    const closedAngle = incomingFold.closedAngle ?? Math.PI / 2;
+    const angle =
+      THREE.MathUtils.lerp(openAngle, closedAngle, props.foldProgress) *
+      (incomingFold.direction ?? 1);
+    const quaternion = new THREE.Quaternion().setFromAxisAngle(axis, angle);
+
+    return { globalPivot, localPivot, axis, angle, quaternion };
+  }, [incomingFold, props.foldProgress, props.parentOrigin]);
+
+  const geometry = props.geometries.get(props.node.panel.id) ?? null;
+  const selected = props.selectedPanelId === props.node.panel.id;
+  const groupPosition: [number, number, number] = props.isRoot
+    ? [0, 0, 0]
+    : [hinge.localPivot.x, hinge.localPivot.y, hinge.localPivot.z];
+  const meshPosition: [number, number, number] = props.isRoot
+    ? [0, 0, 0]
+    : [-hinge.globalPivot.x, -hinge.globalPivot.y, -hinge.globalPivot.z];
 
   return (
-    <group ref={groupRef} position={node.incomingFold ? [hingePivot.x, hingePivot.y, 0] : [0, 0, 0]}>
-      {geo && (
-        <mesh
-          geometry={geo.geometry}
-          material={material}
-          position={meshOffset}
-          onClick={(e) => {
-            e.stopPropagation();
-            props.onPanelClick(node.panel.id);
-          }}
-        >
-          {isSelected && (
-            <meshBasicMaterial attach="material" color="#c9a34a" wireframe transparent opacity={0.6} />
-          )}
-        </mesh>
+    <group position={groupPosition} quaternion={hinge.quaternion}>
+      {geometry && (
+        <SelectablePanelMesh
+          panelId={props.node.panel.id}
+          geometry={geometry.geometry}
+          position={meshPosition}
+          material={props.material}
+          selected={selected}
+          onPanelClick={props.onPanelClick}
+        />
       )}
-      {node.children.map((child) => (
-        <PanelNode key={child.panel.id} {...props} node={child} isRoot={false} />
+
+      {props.node.children.map((child) => (
+        <PanelNode
+          key={child.panel.id}
+          {...props}
+          node={child}
+          parentOrigin={incomingFold ? hinge.globalPivot : props.parentOrigin}
+          isRoot={false}
+        />
       ))}
     </group>
+  );
+}
+
+function SelectablePanelMesh({
+  panelId,
+  geometry,
+  position,
+  material,
+  selected,
+  onPanelClick,
+}: {
+  panelId: string;
+  geometry: THREE.BufferGeometry;
+  position: [number, number, number];
+  material: THREE.Material;
+  selected: boolean;
+  onPanelClick: (id: string) => void;
+}) {
+  return (
+    <group position={position}>
+      <mesh
+        geometry={geometry}
+        material={material}
+        castShadow
+        receiveShadow
+        onClick={(event) => {
+          event.stopPropagation();
+          onPanelClick(panelId);
+        }}
+      />
+      {selected && (
+        <mesh geometry={geometry} scale={[1.002, 1.002, 1.01]}>
+          <meshBasicMaterial color="#c9a34a" wireframe transparent opacity={0.62} depthWrite={false} />
+        </mesh>
+      )}
+    </group>
+  );
+}
+
+function FlatPanel({
+  panel,
+  geometry,
+  material,
+  selected,
+  onPanelClick,
+}: {
+  panel: PackagingPanel;
+  geometry: ReturnType<typeof buildPanelGeometry>;
+  material: THREE.Material;
+  selected: boolean;
+  onPanelClick: (id: string) => void;
+}) {
+  if (!geometry) return null;
+  return (
+    <SelectablePanelMesh
+      panelId={panel.id}
+      geometry={geometry.geometry}
+      position={[0, 0, 0]}
+      material={material}
+      selected={selected}
+      onPanelClick={onPanelClick}
+    />
   );
 }
