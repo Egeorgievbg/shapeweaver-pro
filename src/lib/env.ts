@@ -3,11 +3,11 @@ const configuredBoxcraftBase = (
 )?.trim();
 
 /**
- * Public read-only BoxCraft API base URL. Production should preferably use a
- * same-origin proxy instead of a temporary public tunnel.
+ * Browser-facing read-only BoxCraft gateway. Production defaults to the
+ * same-origin server proxy so temporary tunnels and upstream infrastructure
+ * never leak into client bundles.
  */
-export const BOXCRAFT_API_BASE_URL =
-  configuredBoxcraftBase || "https://constrictive-aspen-nonregimental.ngrok-free.dev";
+export const BOXCRAFT_API_BASE_URL = configuredBoxcraftBase || "/api/boxcraft";
 
 /**
  * Browser-facing administration API base. Empty means same-origin `/api/admin`.
