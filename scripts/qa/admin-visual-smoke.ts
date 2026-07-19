@@ -99,10 +99,13 @@ try {
   await main();
   await writeFile("visual-result.txt", "success\n");
 } catch (error) {
-  const message = error instanceof Error ? `${error.stack ?? error.message}\n` : `${String(error)}\n`;
+  const message =
+    error instanceof Error ? `${error.stack ?? error.message}\n` : `${String(error)}\n`;
   await writeFile("visual-error.txt", message);
   if (activePage) {
-    await activePage.screenshot({ path: "visual-failure.png", fullPage: true }).catch(() => undefined);
+    await activePage
+      .screenshot({ path: "visual-failure.png", fullPage: true })
+      .catch(() => undefined);
     await writeFile("visual-failure-body.txt", await activePage.locator("body").innerText()).catch(
       () => undefined,
     );
