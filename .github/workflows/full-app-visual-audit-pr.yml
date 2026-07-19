@@ -45,7 +45,7 @@ jobs:
       - name: Capture application
         env:
           VISUAL_AUDIT_OUTPUT: artifacts/full-app-visual-audit
-        run: bun scripts/qa/full-app-visual-audit.ts
+        run: bun scripts/qa/full-app-visual-audit-v2.ts
       - name: Upload screenshots and report
         if: always()
         uses: actions/upload-artifact@v4
