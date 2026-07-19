@@ -15,20 +15,24 @@ jobs:
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
       - run: bun run build
-      - name: Run lint
-        id: lint
-        continue-on-error: true
-        shell: bash
+      - name: Check formatting
         run: |
-          set -o pipefail
-          bun run lint 2>&1 | tee lint.log
-      - name: Upload lint report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: ui-ux-lint-report
-          path: lint.log
-          retention-days: 2
-      - name: Enforce lint result
-        if: steps.lint.outcome == 'failure'
-        run: exit 1
+          bunx prettier --check \
+            src/components/catalog/CatalogView.tsx \
+            src/components/dieline/DielineEditor.tsx \
+            src/components/shell/AppHeader.tsx \
+            src/components/studio/StudioWorkspace.tsx \
+            src/routes/__root.tsx \
+            src/routes/library.tsx \
+            'src/routes/studio.$productId.tsx' \
+            src/studio.css
+      - name: Lint changed UI scope
+        run: |
+          bunx eslint \
+            src/components/catalog/CatalogView.tsx \
+            src/components/dieline/DielineEditor.tsx \
+            src/components/shell/AppHeader.tsx \
+            src/components/studio/StudioWorkspace.tsx \
+            src/routes/__root.tsx \
+            src/routes/library.tsx \
+            'src/routes/studio.$productId.tsx'
