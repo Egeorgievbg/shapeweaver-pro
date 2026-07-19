@@ -1,8 +1,3 @@
-/**
- * localStorage-backed persistence for saved configurations and quote drafts.
- * Designed so a cloud-backed adapter can drop in later without touching
- * consumer components.
- */
 const KEY_CONFIGS = "gptsboxes:saved-configurations:v1";
 const KEY_QUOTES = "gptsboxes:quote-drafts:v1";
 const KEY_THEME = "gptsboxes:theme";
@@ -12,7 +7,7 @@ export interface SavedConfiguration {
   id: string;
   name: string;
   updatedAt: string;
-  payload: string; // JSON blob from configurator store
+  payload: string;
   thumbnail?: string;
 }
 
@@ -30,8 +25,8 @@ function writeList<T>(key: string, list: T[]) {
   if (typeof localStorage === "undefined") return;
   try {
     localStorage.setItem(key, JSON.stringify(list));
-  } catch (err) {
-    console.warn("persist write failed", err);
+  } catch (error) {
+    console.warn("persist write failed", error);
   }
 }
 
@@ -43,17 +38,21 @@ export const savedConfigs = {
   },
   upsert(entry: SavedConfiguration) {
     const list = readList<SavedConfiguration>(KEY_CONFIGS);
-    const idx = list.findIndex((c) => c.id === entry.id);
-    if (idx >= 0) list[idx] = entry;
+    const index = list.findIndex((configuration) => configuration.id === entry.id);
+    if (index >= 0) list[index] = entry;
     else list.push(entry);
     writeList(KEY_CONFIGS, list);
   },
   remove(id: string) {
-    const list = readList<SavedConfiguration>(KEY_CONFIGS).filter((c) => c.id !== id);
+    const list = readList<SavedConfiguration>(KEY_CONFIGS).filter(
+      (configuration) => configuration.id !== id,
+    );
     writeList(KEY_CONFIGS, list);
   },
   get(id: string) {
-    return readList<SavedConfiguration>(KEY_CONFIGS).find((c) => c.id === id);
+    return readList<SavedConfiguration>(KEY_CONFIGS).find(
+      (configuration) => configuration.id === id,
+    );
   },
 };
 
@@ -75,15 +74,20 @@ export interface QuoteDraft {
 
 export const quoteDrafts = {
   list(): QuoteDraft[] {
-    return readList<QuoteDraft>(KEY_QUOTES).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    return readList<QuoteDraft>(KEY_QUOTES).sort((a, b) =>
+      b.createdAt.localeCompare(a.createdAt),
+    );
   },
-  add(d: QuoteDraft) {
+  add(draft: QuoteDraft) {
     const list = readList<QuoteDraft>(KEY_QUOTES);
-    list.push(d);
+    list.push(draft);
     writeList(KEY_QUOTES, list);
   },
   remove(id: string) {
-    writeList(KEY_QUOTES, readList<QuoteDraft>(KEY_QUOTES).filter((q) => q.id !== id));
+    writeList(
+      KEY_QUOTES,
+      readList<QuoteDraft>(KEY_QUOTES).filter((quote) => quote.id !== id),
+    );
   },
 };
 
@@ -92,16 +96,16 @@ export const preferences = {
     if (typeof localStorage === "undefined") return "light";
     return (localStorage.getItem(KEY_THEME) as "light" | "dark" | null) ?? "light";
   },
-  setTheme(t: "light" | "dark") {
+  setTheme(theme: "light" | "dark") {
     if (typeof localStorage === "undefined") return;
-    localStorage.setItem(KEY_THEME, t);
+    localStorage.setItem(KEY_THEME, theme);
   },
   getLocale(): "bg" | "en" {
-    if (typeof localStorage === "undefined") return "en";
-    return (localStorage.getItem(KEY_LOCALE) as "bg" | "en" | null) ?? "en";
+    if (typeof localStorage === "undefined") return "bg";
+    return (localStorage.getItem(KEY_LOCALE) as "bg" | "en" | null) ?? "bg";
   },
-  setLocale(l: "bg" | "en") {
+  setLocale(locale: "bg" | "en") {
     if (typeof localStorage === "undefined") return;
-    localStorage.setItem(KEY_LOCALE, l);
+    localStorage.setItem(KEY_LOCALE, locale);
   },
 };
