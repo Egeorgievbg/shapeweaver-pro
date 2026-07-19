@@ -4,14 +4,18 @@ import { EP } from "./endpoints";
 import { zProductsPage, zRelations, type ProductsPageT, type RelationsT } from "./schemas";
 import { adaptListItem, type CatalogCard } from "./adapters";
 import { normalizePayloadPackage } from "./payload-normalizer";
+import { BoxcraftError } from "./errors";
+import { normalizeViewerManifest } from "@/features/configurator/manifest/adapter";
+import {
+  isViewerManifestV1,
+  type ViewerManifestV1,
+} from "@/features/configurator/manifest/types";
 import type { ApiPayloadPackage, NormalizedPackagingModel } from "./types";
 
 export * from "./types";
 export * from "./errors";
-export { boxcraftFetch, EP, adaptListItem, normalizePayloadPackage };
-export type { CatalogCard };
-
-/* ---------------- Query helpers ---------------- */
+export { boxcraftFetch, EP, adaptListItem, normalizePayloadPackage, normalizeViewerManifest };
+export type { CatalogCard, ViewerManifestV1 };
 
 export interface CatalogQuery {
   q?: string;
@@ -79,22 +83,43 @@ export function useProductsPage(params: CatalogQuery) {
       };
     },
     staleTime: 60_000,
-    placeholderData: (prev) => prev,
+    placeholderData: (previous) => previous,
   });
+}
+
+async function loadNormalizedProduct(
+  sourceId: string,
+  signal: AbortSignal,
+): Promise<NormalizedPackagingModel> {
+  try {
+    const raw = await boxcraftFetch<unknown>(EP.manifest(sourceId), { signal });
+    if (!isViewerManifestV1(raw)) {
+      throw new BoxcraftError(
+        "viewer_manifest_invalid",
+        `Viewer manifest for source ${sourceId} does not match gptsboxes.viewer-manifest/v1.`,
+        { details: raw },
+      );
+    }
+    return normalizeViewerManifest(raw);
+  } catch (error) {
+    const status = (error as { status?: number }).status;
+    if (status !== 404 && status !== 501) throw error;
+  }
+
+  const payloadPackage = await boxcraftFetch<ApiPayloadPackage>(EP.payloads(sourceId), { signal });
+  const legacyModel = normalizePayloadPackage(sourceId, payloadPackage);
+  legacyModel.warnings.unshift("legacy_payload_adapter:viewer_manifest_endpoint_unavailable");
+  return legacyModel;
 }
 
 export function useNormalizedProduct(sourceId: string | undefined) {
   return useQuery<NormalizedPackagingModel>({
     queryKey: ["boxcraft", "product-normalized", sourceId],
     enabled: !!sourceId,
-    queryFn: async ({ signal }) => {
-      const pkg = await boxcraftFetch<ApiPayloadPackage>(EP.payloads(sourceId!), { signal });
-      return normalizePayloadPackage(sourceId!, pkg);
-    },
+    queryFn: ({ signal }) => loadNormalizedProduct(sourceId!, signal),
     staleTime: 5 * 60_000,
-    retry: (count, err) => {
-      // don't retry 404s
-      const status = (err as { status?: number }).status;
+    retry: (count, error) => {
+      const status = (error as { status?: number }).status;
       if (status && status >= 400 && status < 500) return false;
       return count < 2;
     },
