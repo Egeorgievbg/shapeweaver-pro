@@ -19,11 +19,11 @@ jobs:
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
       - run: bun run build
-      - name: List formatting differences
-        shell: bash
+      - name: Check formatting
         run: |
-          set +e
-          bunx prettier --list-different \
+          bunx prettier --check \
+            scripts/qa/admin-visual-smoke.ts \
+            scripts/qa/mock-admin-upstream.ts \
             src/components/admin/AdminAuthGate.tsx \
             src/components/admin/AdminControlCenter.tsx \
             src/components/catalog/CatalogView.tsx \
@@ -35,6 +35,7 @@ jobs:
             src/integrations/boxcraft/client.ts \
             src/integrations/boxcraft/errors.ts \
             src/integrations/boxcraft/index.ts \
+            src/lib/admin-i18n.ts \
             src/lib/env.ts \
             src/lib/i18n.ts \
             src/lib/i18n-overrides.ts \
@@ -48,25 +49,12 @@ jobs:
             src/stores/persistence.ts \
             src/studio.css \
             vite.config.ts \
-            .github/workflows/ui-ux-ci.yml > prettier-differences.txt
-          status=$?
-          echo "$status" > prettier-status.txt
-          cat prettier-differences.txt
-          exit 0
-      - name: Upload formatting report
-        uses: actions/upload-artifact@v4
-        with:
-          name: bilingual-admin-format-report
-          path: |
-            prettier-differences.txt
-            prettier-status.txt
-          retention-days: 2
-      - name: Enforce formatting
-        shell: bash
-        run: test "$(cat prettier-status.txt)" = "0"
+            .github/workflows/ui-ux-ci.yml
       - name: Lint changed application scope
         run: |
           bunx eslint \
+            scripts/qa/admin-visual-smoke.ts \
+            scripts/qa/mock-admin-upstream.ts \
             src/components/admin/AdminAuthGate.tsx \
             src/components/admin/AdminControlCenter.tsx \
             src/components/catalog/CatalogView.tsx \
@@ -78,6 +66,7 @@ jobs:
             src/integrations/boxcraft/client.ts \
             src/integrations/boxcraft/errors.ts \
             src/integrations/boxcraft/index.ts \
+            src/lib/admin-i18n.ts \
             src/lib/env.ts \
             src/lib/i18n.ts \
             src/lib/i18n-overrides.ts \
