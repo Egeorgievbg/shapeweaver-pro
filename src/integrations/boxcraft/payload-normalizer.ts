@@ -38,114 +38,136 @@ export function normalizePayloadPackage(
   if (!knifeRaw) warnings.push("knife_missing");
   if (!previewRaw) warnings.push("preview_missing");
 
-  // --- Face direction map: preview.otherFaces + mainFace ---
   const faceDirectionMap: Record<string, FaceDirection> = {};
   if (previewRaw?.mainFace?.face) faceDirectionMap[previewRaw.mainFace.face] = "front";
-  for (const f of previewRaw?.otherFaces ?? []) {
-    if (f.faceName && isFaceDirection(f.direction)) {
-      faceDirectionMap[f.faceName] = f.direction;
+  for (const face of previewRaw?.otherFaces ?? []) {
+    if (face.faceName && isFaceDirection(face.direction)) {
+      faceDirectionMap[face.faceName] = face.direction;
     }
   }
 
-  // --- Face orientation map: modeCate.faces (JSON string) ---
   const faceOrientationMap: Record<string, number> = {};
   const modeCateFacesRaw = knifeRaw?.modeCate?.faces;
   if (typeof modeCateFacesRaw === "string" && modeCateFacesRaw.trim().startsWith("[")) {
     try {
-      const arr = JSON.parse(modeCateFacesRaw) as RawFaceOrientation[];
-      for (const f of arr) {
-        const angle = typeof f.rotate === "string" ? parseFloat(f.rotate) : f.rotate;
-        if (Number.isFinite(angle)) faceOrientationMap[f.value] = angle as number;
+      const values = JSON.parse(modeCateFacesRaw) as RawFaceOrientation[];
+      for (const face of values) {
+        const angle = typeof face.rotate === "string" ? parseFloat(face.rotate) : face.rotate;
+        if (Number.isFinite(angle)) faceOrientationMap[face.value] = angle as number;
       }
     } catch {
       warnings.push("mode_cate_faces_parse_failed");
     }
   }
 
-  // --- Panels ---
-  const panels: PackagingPanel[] = (knifeRaw?.facesForSvg ?? []).map((fs, i) => {
-    const raw = knifeRaw?.faces?.[i];
-    const bboxX = raw?.x ?? 0;
-    const bboxY = raw?.y ?? 0;
-    const bboxW = raw?.w ?? 0;
-    const bboxH = raw?.h ?? 0;
-    const dir = faceDirectionMap[fs.name];
-    return {
-      id: fs.name,
-      name: fs.name,
-      svgPath: fs.d,
-      bbox: { x: bboxX, y: bboxY, w: bboxW, h: bboxH },
-      direction: dir,
-      orientationRotate: faceOrientationMap[fs.name],
-      layer: "traditional",
-      isFlap: !dir, // heuristic: if not mapped to a cardinal direction, treat as flap
-      centroid: { x: bboxX + bboxW / 2, y: bboxY + bboxH / 2 },
-    };
+  const panels: PackagingPanel[] = (knifeRaw?.facesForSvg ?? [])
+    .filter((face) => Boolean(face?.name && face?.d?.trim()))
+    .map((face, index) => {
+      const raw = knifeRaw?.faces?.[index];
+      const bboxX = finiteNumber(raw?.x, 0);
+      const bboxY = finiteNumber(raw?.y, 0);
+      const bboxW = positiveNumber(raw?.w, 1);
+      const bboxH = positiveNumber(raw?.h, 1);
+      const direction = faceDirectionMap[face.name];
+
+      return {
+        id: face.name,
+        name: face.name,
+        svgPath: face.d,
+        bbox: { x: bboxX, y: bboxY, w: bboxW, h: bboxH },
+        direction,
+        orientationRotate: faceOrientationMap[face.name],
+        layer: "traditional",
+        isFlap: !direction,
+        centroid: { x: bboxX + bboxW / 2, y: bboxY + bboxH / 2 },
+      };
+    });
+
+  const panelIds = panels.map((panel) => panel.id);
+  let unresolvedFoldCount = 0;
+  const folds: PackagingFold[] = (knifeRaw?.folds ?? []).flatMap((fold) => {
+    const [parentPanelId, childPanelId] = resolveFoldPanels(fold.name, panelIds);
+    if (!parentPanelId || !childPanelId) {
+      unresolvedFoldCount += 1;
+      return [];
+    }
+
+    return [
+      {
+        id: fold.name,
+        parentPanelId,
+        childPanelId,
+        from: [finiteNumber(fold.x1, 0), finiteNumber(fold.y1, 0)],
+        to: [finiteNumber(fold.x2, 0), finiteNumber(fold.y2, 0)],
+        direction: fold.rotate ? -1 : 1,
+        openAngle: 0,
+        closedAngle: Math.PI / 2,
+      },
+    ];
   });
 
-  // --- Folds: parse "PARENT_CHILD" naming convention ---
-  const folds: PackagingFold[] = (knifeRaw?.folds ?? []).map((f) => {
-    const [parentId, childId] = splitFoldName(f.name);
-    // Detect if this fold is *closing* the box: when child is a flap (no direction)
-    // it opens 90°; when between two cardinal faces, opens 90° in the box-close direction.
-    const closedAngle = Math.PI / 2;
-    return {
-      id: f.name,
-      parentPanelId: parentId ?? "",
-      childPanelId: childId ?? f.name,
-      from: [f.x1, f.y1],
-      to: [f.x2, f.y2],
-      direction: f.rotate ? -1 : 1,
-      openAngle: 0,
-      closedAngle,
-    };
-  });
+  if (unresolvedFoldCount > 0) {
+    warnings.push(`fold_relationships_unresolved:${unresolvedFoldCount}`);
+  }
 
-  // Backfill parent references on panels
   for (const fold of folds) {
-    const child = panels.find((p) => p.id === fold.childPanelId);
+    const child = panels.find((panel) => panel.id === fold.childPanelId);
     if (child) child.parentId = fold.parentPanelId;
   }
 
-  // --- Dieline ---
-  const dieline: NormalizedDieline | undefined = knifeRaw
+  const totalX = positiveNumber(knifeRaw?.totalX, 0);
+  const totalY = positiveNumber(knifeRaw?.totalY, 0);
+  const hasDielineSize = totalX > 0 && totalY > 0;
+
+  const dieline: NormalizedDieline | undefined = knifeRaw && hasDielineSize
     ? {
-        totalX: knifeRaw.totalX,
-        totalY: knifeRaw.totalY,
+        totalX,
+        totalY,
         cutsPath: knifeRaw.cutsForSvg ?? "",
         bleedsPath: knifeRaw.bleedsForSvg,
         bleedline: knifeRaw.bleedline,
         faces: panels,
         folds,
-        holes: (knifeRaw.holesForSvg as { d?: string }[] | undefined)?.map((h) => ({ d: h?.d ?? "" })) ?? [],
-        sizeArrows: (knifeRaw.sizeArrowData ?? []).map((s) => ({
-          label: s.tpointer?.value ?? s.lineName ?? "",
-          length: s.lineLength ?? 0,
-          p1: s.p1 ?? { x: 0, y: 0 },
-          p2: s.p2 ?? { x: 0, y: 0 },
-          tpointer: s.tpointer,
-          axis: (s.unit === "length" || s.unit === "width" || s.unit === "height"
-            ? s.unit
+        holes:
+          (knifeRaw.holesForSvg as { d?: string }[] | undefined)?.map((hole) => ({
+            d: hole?.d ?? "",
+          })) ?? [],
+        sizeArrows: (knifeRaw.sizeArrowData ?? []).map((sizeArrow) => ({
+          label: sizeArrow.tpointer?.value ?? sizeArrow.lineName ?? "",
+          length: finiteNumber(sizeArrow.lineLength, 0),
+          p1: sizeArrow.p1 ?? { x: 0, y: 0 },
+          p2: sizeArrow.p2 ?? { x: 0, y: 0 },
+          tpointer: sizeArrow.tpointer,
+          axis: (sizeArrow.unit === "length" ||
+          sizeArrow.unit === "width" ||
+          sizeArrow.unit === "height"
+            ? sizeArrow.unit
             : "other") as "length" | "width" | "height" | "other",
         })),
       }
     : undefined;
 
-  // --- Dimensions ---
+  if (knifeRaw && !hasDielineSize) warnings.push("dieline_size_invalid");
+
   const size = knifeRaw?.size ?? knifeRaw?.knifeSize;
   const dimensions: Dimensions = {
-    width: size?.L ?? detailsRaw?.length ?? previewRaw?.length ?? 100,
-    depth: size?.W ?? detailsRaw?.width ?? previewRaw?.width ?? 60,
-    height: size?.H ?? detailsRaw?.height ?? previewRaw?.height ?? 40,
+    width: positiveNumber(size?.L ?? detailsRaw?.length ?? previewRaw?.length, 100),
+    depth: positiveNumber(size?.W ?? detailsRaw?.width ?? previewRaw?.width, 60),
+    height: positiveNumber(size?.H ?? detailsRaw?.height ?? previewRaw?.height, 40),
     unit: "mm",
-    thickness: (size as { D?: number } | undefined)?.D ?? knifeRaw?.thickness ?? 1.5,
+    thickness: positiveNumber(
+      (size as { D?: number } | undefined)?.D ?? knifeRaw?.thickness,
+      1.5,
+    ),
   };
 
-  // --- Limits from modeCate ---
   const parseLimit = (raw: string | undefined): [number?, number?] => {
     if (!raw) return [];
-    const [min, max] = raw.split(",").map((n) => parseFloat(n.trim()));
-    return [Number.isFinite(min) ? min : undefined, Number.isFinite(max) ? max : undefined];
+    const [minimum, maximum] = raw.split(",").map((value) => parseFloat(value.trim()));
+    return [
+      Number.isFinite(minimum) ? minimum : undefined,
+      Number.isFinite(maximum) ? maximum : undefined,
+    ];
   };
   const [lengthMin, lengthMax] = parseLimit(knifeRaw?.modeCate?.lengthLimit);
   const [widthMin, widthMax] = parseLimit(knifeRaw?.modeCate?.widthLimit);
@@ -154,10 +176,8 @@ export function normalizePayloadPackage(
     ? parseFloat(knifeRaw.modeCate.minThickness)
     : undefined;
 
-  // --- Materials ---
   const materials: PackagingMaterial[] = deriveMaterials(previewRaw, detailsRaw);
 
-  // --- Preview ---
   const preview: NormalizedPreview | undefined = previewRaw
     ? {
         imageUrl: resolveAssetUrl(detailsRaw?.image ?? previewRaw.preview_3d_img),
@@ -166,13 +186,19 @@ export function normalizePayloadPackage(
       }
     : undefined;
 
-  // --- Geometry strategy selection ---
   const gltfUrl = resolveGltfUrl(detailsRaw?.gltf);
+  const hasUsableKnife =
+    Boolean(dieline) &&
+    panels.length > 0 &&
+    folds.length > 0 &&
+    panels.every((panel) => Boolean(panel.svgPath.trim()));
   const strategy: GeometryStrategy = selectStrategy({
-    hasGltf: !!gltfUrl,
-    hasKnife: !!knifeRaw && (knifeRaw.faces?.length ?? 0) > 0 && (knifeRaw.folds?.length ?? 0) > 0,
-    hasPreviewImage: !!(detailsRaw?.image || previewRaw?.preview_3d_img),
+    hasGltf: Boolean(gltfUrl),
+    hasKnife: hasUsableKnife,
+    hasPreviewImage: Boolean(detailsRaw?.image || previewRaw?.preview_3d_img),
   });
+
+  if (knifeRaw && !hasUsableKnife) warnings.push("knife_geometry_incomplete");
 
   return {
     id: `source-${sourceId}`,
@@ -193,35 +219,80 @@ export function normalizePayloadPackage(
     openParams: (knifeRaw?.openParams ?? []).flat(),
     faceDirectionMap,
     faceOrientationMap,
-    limits: { lengthMin, lengthMax, widthMin, widthMax, heightMin, heightMax, thicknessMin },
+    limits: {
+      lengthMin,
+      lengthMax,
+      widthMin,
+      widthMax,
+      heightMin,
+      heightMax,
+      thicknessMin,
+    },
     warnings,
     raw: { details: detailsRaw, knife: knifeRaw, preview: previewRaw },
   };
 }
 
-function selectStrategy(f: {
+function selectStrategy(flags: {
   hasGltf: boolean;
   hasKnife: boolean;
   hasPreviewImage: boolean;
 }): GeometryStrategy {
-  // GLB is preferred when the URL exists AND we consider it likely to load.
-  // Because Pacdora CDN GLBs are frequently 404 or CORS-blocked from the
-  // browser, we prefer knife-rig when available and keep GLB as a lazy attempt
-  // that upgrades the strategy on successful load.
-  if (f.hasKnife) return "knife-rig";
-  if (f.hasGltf) return "gltf";
-  if (f.hasPreviewImage) return "preview-only";
+  if (flags.hasKnife) return "knife-rig";
+  if (flags.hasGltf) return "gltf";
+  if (flags.hasPreviewImage) return "preview-only";
   return "unsupported";
 }
 
-function splitFoldName(name: string): [string?, string?] {
-  const idx = name.indexOf("_");
-  if (idx < 0) return [undefined, name];
-  return [name.slice(0, idx), name.slice(idx + 1)];
+function resolveFoldPanels(
+  foldName: string,
+  panelIds: string[],
+): [string | undefined, string | undefined] {
+  const sortedIds = [...panelIds].sort((left, right) => right.length - left.length);
+  const separators = ["_", "-", "|", ":", "/"];
+
+  for (const parentId of sortedIds) {
+    for (const separator of separators) {
+      const prefix = `${parentId}${separator}`;
+      if (!foldName.startsWith(prefix)) continue;
+      const childCandidate = foldName.slice(prefix.length);
+      const childId = sortedIds.find((candidate) => candidate === childCandidate);
+      if (childId) return [parentId, childId];
+    }
+  }
+
+  for (const childId of sortedIds) {
+    for (const separator of separators) {
+      const suffix = `${separator}${childId}`;
+      if (!foldName.endsWith(suffix)) continue;
+      const parentCandidate = foldName.slice(0, -suffix.length);
+      const parentId = sortedIds.find((candidate) => candidate === parentCandidate);
+      if (parentId) return [parentId, childId];
+    }
+  }
+
+  return [undefined, undefined];
 }
 
-function isFaceDirection(v: string | undefined): v is FaceDirection {
-  return v === "front" || v === "back" || v === "left" || v === "right" || v === "top" || v === "bottom";
+function finiteNumber(value: unknown, fallback: number): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : fallback;
+}
+
+function positiveNumber(value: unknown, fallback: number): number {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
+}
+
+function isFaceDirection(value: string | undefined): value is FaceDirection {
+  return (
+    value === "front" ||
+    value === "back" ||
+    value === "left" ||
+    value === "right" ||
+    value === "top" ||
+    value === "bottom"
+  );
 }
 
 function deriveMaterials(
@@ -229,18 +300,26 @@ function deriveMaterials(
   _detailsRaw: RawDetailsBody | undefined,
 ): PackagingMaterial[] {
   const results: PackagingMaterial[] = [];
-  const layers = (previewRaw?.layer ?? {}) as Record<string, { science_name?: string; thickness?: number; def_line_color?: string }>;
+  const layers = (previewRaw?.layer ?? {}) as Record<
+    string,
+    { science_name?: string; thickness?: number; def_line_color?: string }
+  >;
+
   for (const [key, layer] of Object.entries(layers)) {
     results.push({
       id: key,
       name: layer.science_name ?? key,
       layer: key,
-      thickness: layer.thickness ?? 1.5,
-      color: layer.def_line_color && layer.def_line_color.startsWith("#") ? layer.def_line_color : "#ffffff",
+      thickness: positiveNumber(layer.thickness, 1.5),
+      color:
+        layer.def_line_color && layer.def_line_color.startsWith("#")
+          ? layer.def_line_color
+          : "#ffffff",
       roughness: 0.85,
       metalness: 0,
     });
   }
+
   if (results.length === 0) {
     results.push({
       id: "traditional",
@@ -252,5 +331,6 @@ function deriveMaterials(
       metalness: 0,
     });
   }
+
   return results;
 }
