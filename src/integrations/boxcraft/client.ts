@@ -3,7 +3,6 @@ import { ApiUnavailableError, BoxcraftError, NetworkError } from "./errors";
 
 const DEFAULT_HEADERS: Record<string, string> = {
   Accept: "application/json, application/x-ndjson, application/zip, */*",
-  "ngrok-skip-browser-warning": "true",
 };
 
 export interface RequestOptions {
@@ -18,9 +17,12 @@ export interface RequestOptions {
 
 function buildUrl(path: string, query?: RequestOptions["query"]): string {
   const base = BOXCRAFT_API_BASE_URL.replace(/\/+$/, "");
-  const url = new URL(
-    path.startsWith("http") ? path : `${base}${path.startsWith("/") ? "" : "/"}${path}`,
-  );
+  const target = path.startsWith("http")
+    ? path
+    : `${base}${path.startsWith("/") ? "" : "/"}${path}`;
+  const origin = typeof window !== "undefined" ? window.location.origin : "http://localhost";
+  const url = new URL(target, origin);
+
   if (query) {
     for (const [key, value] of Object.entries(query)) {
       if (value === undefined || value === null || value === "") continue;
