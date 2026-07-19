@@ -9,7 +9,10 @@ export const Route = createFileRoute("/configurations")({
   head: () => ({
     meta: [
       { title: "GPTSBOXES — Запазени / Saved configurations" },
-      { name: "description", content: "Saved packaging configurations / Запазени конфигурации на опаковки." },
+      {
+        name: "description",
+        content: "Saved packaging configurations / Запазени конфигурации на опаковки.",
+      },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -44,7 +47,8 @@ function ConfigurationsPage() {
                 <div className="min-w-0">
                   <p className="truncate font-medium">{configuration.name}</p>
                   <p className="mt-1 font-mono text-xs text-muted-foreground">
-                    {formatDate(configuration.updatedAt)} · {t("saved.source")} {parsed?.sourceProductId ?? "—"}
+                    {formatDate(configuration.updatedAt)} · {t("saved.source")}{" "}
+                    {parsed?.sourceProductId ?? "—"}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">

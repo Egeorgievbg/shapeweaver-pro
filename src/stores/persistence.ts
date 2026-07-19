@@ -74,9 +74,7 @@ export interface QuoteDraft {
 
 export const quoteDrafts = {
   list(): QuoteDraft[] {
-    return readList<QuoteDraft>(KEY_QUOTES).sort((a, b) =>
-      b.createdAt.localeCompare(a.createdAt),
-    );
+    return readList<QuoteDraft>(KEY_QUOTES).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   },
   add(draft: QuoteDraft) {
     const list = readList<QuoteDraft>(KEY_QUOTES);

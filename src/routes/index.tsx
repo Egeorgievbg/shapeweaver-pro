@@ -16,7 +16,8 @@ export const Route = createFileRoute("/")({
       { property: "og:title", content: "GPTSBOXES — 3D Packaging Studio" },
       {
         property: "og:description",
-        content: "Real-time packaging studio with 2D dielines, WebGL visualization, artwork, and production exports.",
+        content:
+          "Real-time packaging studio with 2D dielines, WebGL visualization, artwork, and production exports.",
       },
     ],
   }),

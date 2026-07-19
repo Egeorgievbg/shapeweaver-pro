@@ -116,7 +116,9 @@ export function capabilityAllows(
   return Boolean(
     capabilities?.some(
       (capability) =>
-        capability.enabled && capability.resource === resource && capability.methods.includes(method),
+        capability.enabled &&
+        capability.resource === resource &&
+        capability.methods.includes(method),
     ),
   );
 }

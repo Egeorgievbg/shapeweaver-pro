@@ -77,7 +77,12 @@ export function AppHeader() {
             <option value="en">EN · {t("language.en")}</option>
           </select>
         </label>
-        <button onClick={toggle} className="studio-icon-button" aria-label={t("theme.toggle")} title={t("theme.toggle")}>
+        <button
+          onClick={toggle}
+          className="studio-icon-button"
+          aria-label={t("theme.toggle")}
+          title={t("theme.toggle")}
+        >
           {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
         </button>
       </div>

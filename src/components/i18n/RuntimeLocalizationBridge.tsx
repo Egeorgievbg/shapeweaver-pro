@@ -86,7 +86,8 @@ export function RuntimeLocalizationBridge() {
       for (const mutation of mutations) {
         mutation.addedNodes.forEach(apply);
         if (mutation.type === "characterData") apply(mutation.target);
-        if (mutation.type === "attributes" && mutation.target instanceof Element) apply(mutation.target);
+        if (mutation.type === "attributes" && mutation.target instanceof Element)
+          apply(mutation.target);
       }
     });
 
