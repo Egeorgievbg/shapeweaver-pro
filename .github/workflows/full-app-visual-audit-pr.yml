@@ -44,15 +44,15 @@ jobs:
           done
       - name: Capture application
         env:
-          VISUAL_AUDIT_OUTPUT: artifacts/full-app-visual-audit
-        run: bun scripts/qa/full-app-visual-audit-v2.ts
+          VISUAL_AUDIT_OUTPUT: artifacts/final-visual-audit
+        run: bun scripts/qa/final-visual-audit.ts
       - name: Upload screenshots and report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: full-app-visual-audit
+          name: final-visual-audit
           path: |
-            artifacts/full-app-visual-audit
+            artifacts/final-visual-audit
             application.log
             mock-upstream.log
           if-no-files-found: warn
