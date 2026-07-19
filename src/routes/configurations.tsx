@@ -27,7 +27,7 @@ function ConfigurationsPage() {
   }, []);
 
   return (
-    <div className="mx-auto w-full max-w-5xl px-6 py-8">
+    <div data-i18n-skip="true" className="mx-auto w-full max-w-5xl px-6 py-8">
       <h1 className="text-2xl font-semibold tracking-tight">{t("saved.title")}</h1>
       <p className="mt-1 text-sm text-muted-foreground">{t("saved.body")}</p>
 

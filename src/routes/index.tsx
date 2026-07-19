@@ -55,7 +55,10 @@ function LandingPage() {
   ];
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-16 px-6 py-20 lg:py-28">
+    <div
+      data-i18n-skip="true"
+      className="mx-auto flex w-full max-w-6xl flex-col gap-16 px-6 py-20 lg:py-28"
+    >
       <section className="grid gap-10 lg:grid-cols-[1.2fr_1fr] lg:items-center">
         <div>
           <p className="font-mono text-xs uppercase tracking-[0.25em] text-muted-foreground">

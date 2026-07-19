@@ -66,7 +66,10 @@ export function AdminAuthGate() {
 
   if (session.isLoading) {
     return (
-      <div className="flex min-h-[calc(100dvh-3.5rem)] items-center justify-center bg-surface-2/45">
+      <div
+        data-i18n-skip="true"
+        className="flex min-h-[calc(100dvh-3.5rem)] items-center justify-center bg-surface-2/45"
+      >
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" /> {t("status.loading")}
         </div>
@@ -77,12 +80,19 @@ export function AdminAuthGate() {
   const gatewayUnavailable = session.error instanceof AdminApiError && session.error.status === 503;
 
   if (gatewayUnavailable) {
-    return <AdminControlCenter />;
+    return (
+      <div data-i18n-skip="true">
+        <AdminControlCenter />
+      </div>
+    );
   }
 
   if (!session.data?.authenticated) {
     return (
-      <div className="flex min-h-[calc(100dvh-3.5rem)] items-center justify-center bg-surface-2/45 px-4 py-12">
+      <div
+        data-i18n-skip="true"
+        className="flex min-h-[calc(100dvh-3.5rem)] items-center justify-center bg-surface-2/45 px-4 py-12"
+      >
         <form
           onSubmit={submit}
           className="w-full max-w-md rounded-2xl border border-panel-border bg-panel p-6 shadow-xl md:p-8"
@@ -98,7 +108,7 @@ export function AdminAuthGate() {
           </h1>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
             {locale === "bg"
-              ? "Въведете сървърно конфигурирания администраторски ключ. Той се изпраща само към same-origin gateway и не се запазва в браузъра."
+              ? "Въведете сървърно конфигурирания администраторски ключ. Той се изпраща само към защитения gateway от същия домейн и не се запазва в браузъра."
               : "Enter the server-configured administrator access key. It is sent only to the same-origin gateway and is never stored in the browser."}
           </p>
 
@@ -134,7 +144,7 @@ export function AdminAuthGate() {
           {session.isError && (
             <p className="mt-4 rounded-lg border border-destructive/25 bg-destructive/5 p-3 text-xs leading-5 text-destructive">
               {locale === "bg"
-                ? "Защитеният административен gateway не отговори. Проверете сървърната конфигурация."
+                ? "Защитеният административен шлюз не отговори. Проверете сървърната конфигурация."
                 : "The secure administration gateway did not respond. Check the server configuration."}
             </p>
           )}
@@ -144,7 +154,7 @@ export function AdminAuthGate() {
   }
 
   return (
-    <div className="relative">
+    <div data-i18n-skip="true" className="relative">
       <button
         onClick={() => logout.mutate()}
         disabled={logout.isPending}

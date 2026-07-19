@@ -121,7 +121,7 @@ export const MESSAGES: Record<Locale, Record<string, string>> = {
     "admin.mode.live": "Свързана администрация",
     "admin.mode.readOnly": "Диагностичен режим",
     "admin.mode.help":
-      "Операциите за запис се активират само при налични защитени admin API endpoints.",
+      "Операциите за запис се активират само при налични защитени административни API крайни точки.",
     "admin.search": "Търси в администрацията",
     "admin.overview": "Общ преглед",
     "admin.products": "Продукти",

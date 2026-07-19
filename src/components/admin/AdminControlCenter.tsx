@@ -170,7 +170,7 @@ export function AdminControlCenter() {
     (relations.data?.materials.length ?? 0);
 
   return (
-    <div className="min-h-[calc(100dvh-3.5rem)] bg-surface-2/45">
+    <div data-i18n-skip="true" className="min-h-[calc(100dvh-3.5rem)] bg-surface-2/45">
       <div className="border-b border-panel-border bg-panel px-4 py-5 md:px-7">
         <div className="mx-auto flex max-w-[1600px] flex-wrap items-start justify-between gap-4">
           <div>

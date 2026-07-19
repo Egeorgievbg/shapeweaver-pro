@@ -19,6 +19,7 @@ export function AppHeader() {
 
   return (
     <header
+      data-i18n-skip="true"
       className={cn(
         "sticky top-0 z-40 flex h-14 shrink-0 items-center gap-3 border-b border-panel-border bg-panel/92 px-3 backdrop-blur-xl md:px-5",
         isStudio && "h-12",
