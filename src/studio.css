@@ -6,8 +6,7 @@
 }
 
 .studio-topbar {
-  box-shadow: 0 1px 0
-    color-mix(in oklch, var(--color-panel-border) 70%, transparent);
+  box-shadow: 0 1px 0 color-mix(in oklch, var(--color-panel-border) 70%, transparent);
 }
 
 /* Keep default display behaviour at zero specificity so Tailwind responsive
@@ -62,8 +61,7 @@
 .studio-primary-button {
   background: var(--color-primary);
   color: var(--color-primary-foreground);
-  box-shadow: 0 1px 2px
-    color-mix(in oklch, var(--color-foreground) 12%, transparent);
+  box-shadow: 0 1px 2px color-mix(in oklch, var(--color-foreground) 12%, transparent);
 }
 
 .studio-primary-button:hover {
@@ -78,11 +76,7 @@
 }
 
 .studio-secondary-button:hover {
-  border-color: color-mix(
-    in oklch,
-    var(--color-muted-foreground) 40%,
-    var(--color-input)
-  );
+  border-color: color-mix(in oklch, var(--color-muted-foreground) 40%, var(--color-input));
   background: var(--color-accent);
 }
 
