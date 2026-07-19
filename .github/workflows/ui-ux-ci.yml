@@ -1,4 +1,4 @@
-name: UI UX validation
+name: Application validation
 
 on:
   pull_request:
@@ -8,7 +8,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ui-ux-validation-${{ github.event.pull_request.number }}
+  group: application-validation-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
 jobs:
@@ -22,28 +22,44 @@ jobs:
       - name: Check formatting
         run: |
           bunx prettier --check \
+            src/components/admin/AdminControlCenter.tsx \
             src/components/catalog/CatalogView.tsx \
             src/components/dieline/DielineEditor.tsx \
+            src/components/i18n/RuntimeLocalizationBridge.tsx \
             src/components/shell/AppHeader.tsx \
             src/components/studio/StudioWorkspace.tsx \
+            src/integrations/admin/client.ts \
             src/integrations/boxcraft/client.ts \
             src/integrations/boxcraft/errors.ts \
+            src/lib/i18n.ts \
             src/routes/__root.tsx \
+            src/routes/admin.data.tsx \
+            src/routes/configurations.tsx \
+            src/routes/index.tsx \
             src/routes/library.tsx \
             'src/routes/studio.$productId.tsx' \
+            src/stores/persistence.ts \
             src/studio.css \
             vite.config.ts \
             .github/workflows/ui-ux-ci.yml
-      - name: Lint changed UI scope
+      - name: Lint changed application scope
         run: |
           bunx eslint \
+            src/components/admin/AdminControlCenter.tsx \
             src/components/catalog/CatalogView.tsx \
             src/components/dieline/DielineEditor.tsx \
+            src/components/i18n/RuntimeLocalizationBridge.tsx \
             src/components/shell/AppHeader.tsx \
             src/components/studio/StudioWorkspace.tsx \
+            src/integrations/admin/client.ts \
             src/integrations/boxcraft/client.ts \
             src/integrations/boxcraft/errors.ts \
+            src/lib/i18n.ts \
             src/routes/__root.tsx \
+            src/routes/admin.data.tsx \
+            src/routes/configurations.tsx \
+            src/routes/index.tsx \
             src/routes/library.tsx \
             'src/routes/studio.$productId.tsx' \
+            src/stores/persistence.ts \
             vite.config.ts
