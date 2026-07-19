@@ -5,7 +5,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: ui-ux-validation-${{ github.event.pull_request.number }}
@@ -16,55 +16,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.head_ref }}
-          fetch-depth: 0
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
-      - name: Improve catalog offline UX
-        shell: bash
-        run: |
-          python - <<'PY'
-          from pathlib import Path
-
-          path = Path("src/components/catalog/CatalogView.tsx")
-          content = path.read_text()
-          content = content.replace(
-              '<p className="text-xl font-semibold">{total.toLocaleString()}</p>',
-              '''<p className="text-xl font-semibold">
-                {products.isError || products.isLoading ? "—" : total.toLocaleString()}
-              </p>''',
-          )
-          content = content.replace(
-              '<p className="max-w-md text-sm text-muted-foreground">{message}</p>',
-              '''<p className="max-w-md text-sm leading-6 text-muted-foreground">
-        The packaging data service is currently unavailable. Check the API connection or try again.
-      </p>
-      <details className="max-w-xl rounded-lg border border-panel-border bg-surface-2 px-3 py-2 text-left">
-        <summary className="cursor-pointer text-[11px] font-medium text-muted-foreground">
-          Technical diagnostics
-        </summary>
-        <p className="mt-2 break-all font-mono text-[10px] leading-5 text-muted-foreground">
-          {message}
-        </p>
-      </details>''',
-          )
-          path.write_text(content)
-          PY
-          bunx prettier --write src/components/catalog/CatalogView.tsx .github/workflows/ui-ux-ci.yml
-          bunx eslint --fix src/components/catalog/CatalogView.tsx
-      - name: Commit offline UX refinement
-        shell: bash
-        run: |
-          if git diff --quiet; then
-            echo "Catalog UX already refined"
-          else
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add src/components/catalog/CatalogView.tsx .github/workflows/ui-ux-ci.yml
-            git commit -m "fix: refine catalog API error experience"
-            git push origin HEAD:${{ github.head_ref }}
-          fi
       - run: bun run build
       - name: Check formatting
         run: |
@@ -73,6 +26,8 @@ jobs:
             src/components/dieline/DielineEditor.tsx \
             src/components/shell/AppHeader.tsx \
             src/components/studio/StudioWorkspace.tsx \
+            src/integrations/boxcraft/client.ts \
+            src/integrations/boxcraft/errors.ts \
             src/routes/__root.tsx \
             src/routes/library.tsx \
             'src/routes/studio.$productId.tsx' \
@@ -86,6 +41,8 @@ jobs:
             src/components/dieline/DielineEditor.tsx \
             src/components/shell/AppHeader.tsx \
             src/components/studio/StudioWorkspace.tsx \
+            src/integrations/boxcraft/client.ts \
+            src/integrations/boxcraft/errors.ts \
             src/routes/__root.tsx \
             src/routes/library.tsx \
             'src/routes/studio.$productId.tsx' \
