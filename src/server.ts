@@ -202,6 +202,77 @@ async function handleAdminSession(request: Request, env: unknown) {
   return jsonResponse({ ok: true, authenticated });
 }
 
+async function handleBoxcraftGateway(
+  request: Request,
+  env: unknown,
+): Promise<Response | null> {
+  const url = new URL(request.url);
+  if (!url.pathname.startsWith("/api/boxcraft")) return null;
+
+  if (request.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: { Allow: "GET, HEAD, OPTIONS" } });
+  }
+  if (request.method !== "GET" && request.method !== "HEAD") {
+    return jsonResponse({ ok: false, error: "method_not_allowed" }, 405, {
+      Allow: "GET, HEAD, OPTIONS",
+    });
+  }
+
+  const upstreamBase = getEnvironmentValue(env, "BOXCRAFT_UPSTREAM_URL");
+  if (!upstreamBase) {
+    return jsonResponse(
+      {
+        ok: false,
+        error: "boxcraft_upstream_not_configured",
+        message: "Set BOXCRAFT_UPSTREAM_URL on the server.",
+      },
+      503,
+    );
+  }
+
+  const suffix = url.pathname.slice("/api/boxcraft".length) || "/";
+  const target = new URL(
+    `${suffix}${url.search}`,
+    upstreamBase.endsWith("/") ? upstreamBase : `${upstreamBase}/`,
+  );
+  const headers = new Headers({
+    Accept: request.headers.get("accept") ?? "application/json, */*",
+    "User-Agent": "GPTSBOXES-BoxCraft-Gateway/1.0",
+    "ngrok-skip-browser-warning": "true",
+  });
+
+  let upstreamResponse: Response;
+  try {
+    upstreamResponse = await fetch(target, {
+      method: request.method,
+      headers,
+      redirect: "follow",
+    });
+  } catch (error) {
+    console.error("BoxCraft upstream request failed", error);
+    return jsonResponse({ ok: false, error: "boxcraft_upstream_unreachable" }, 502);
+  }
+
+  const responseHeaders = new Headers({ "x-content-type-options": "nosniff" });
+  for (const name of [
+    "content-type",
+    "content-length",
+    "cache-control",
+    "etag",
+    "last-modified",
+    "x-request-id",
+  ]) {
+    const value = upstreamResponse.headers.get(name);
+    if (value) responseHeaders.set(name, value);
+  }
+
+  return new Response(request.method === "HEAD" ? null : upstreamResponse.body, {
+    status: upstreamResponse.status,
+    statusText: upstreamResponse.statusText,
+    headers: responseHeaders,
+  });
+}
+
 async function handleAdminGateway(request: Request, env: unknown): Promise<Response | null> {
   const url = new URL(request.url);
   if (!url.pathname.startsWith("/api/admin")) return null;
@@ -310,6 +381,9 @@ function isH3SwallowedErrorBody(body: string): boolean {
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
+      const boxcraftResponse = await handleBoxcraftGateway(request, env);
+      if (boxcraftResponse) return boxcraftResponse;
+
       const adminResponse = await handleAdminGateway(request, env);
       if (adminResponse) return adminResponse;
 
