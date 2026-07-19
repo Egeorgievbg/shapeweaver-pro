@@ -19,13 +19,9 @@ jobs:
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
       - run: bun run build
-      - name: List formatting differences
-        id: format
-        continue-on-error: true
-        shell: bash
+      - name: Check formatting
         run: |
-          set -o pipefail
-          bunx prettier --list-different \
+          bunx prettier --check \
             src/components/catalog/CatalogView.tsx \
             src/components/dieline/DielineEditor.tsx \
             src/components/shell/AppHeader.tsx \
@@ -37,18 +33,7 @@ jobs:
             'src/routes/studio.$productId.tsx' \
             src/studio.css \
             vite.config.ts \
-            .github/workflows/ui-ux-ci.yml | tee prettier-different.txt
-      - name: Upload formatting report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: ui-ux-format-report
-          path: prettier-different.txt
-          if-no-files-found: warn
-          retention-days: 2
-      - name: Enforce formatting
-        if: steps.format.outcome == 'failure'
-        run: exit 1
+            .github/workflows/ui-ux-ci.yml
       - name: Lint changed UI scope
         run: |
           bunx eslint \
