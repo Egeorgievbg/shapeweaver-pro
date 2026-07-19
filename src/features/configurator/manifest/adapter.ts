@@ -1,12 +1,44 @@
 import type {
   GeometryStrategy,
   NormalizedPackagingModel,
-  PackagingAnimationSequence,
   PackagingFold,
   PackagingMaterial,
   PackagingPanel,
 } from "@/integrations/boxcraft/types";
-import type { ViewerManifestV1, ViewerRuntimeStrategy } from "./types";
+import type {
+  ExportSupport,
+  ManifestAnimationSequence,
+  ManifestAsset,
+  ManifestValidation,
+  ProductionStatus,
+  ViewerManifestV1,
+  ViewerRuntimeStrategy,
+} from "./types";
+
+export type ManifestFoldModel = PackagingFold & {
+  foldIndex: number;
+  axis?: [number, number, number];
+};
+
+export type ManifestMaterialModel = PackagingMaterial & {
+  insideColor?: string;
+  edgeColor?: string;
+  clearcoat?: number;
+  transmission?: number;
+  maps?: Record<string, string | undefined>;
+};
+
+export type ManifestBackedPackagingModel = NormalizedPackagingModel & {
+  sourceHash: string;
+  modelVersion: string;
+  productionStatus: ProductionStatus;
+  runtimeStrategy: ViewerRuntimeStrategy;
+  animations: ManifestAnimationSequence[];
+  assets: ManifestAsset[];
+  exportCapabilities?: Record<string, ExportSupport>;
+  validation: ManifestValidation;
+  raw: NormalizedPackagingModel["raw"] & { manifest: ViewerManifestV1 };
+};
 
 function strategyFor(manifest: ViewerManifestV1): GeometryStrategy {
   if (manifest.runtimeStrategy === "gltf" && manifest.model.gltfUrl) return "gltf";
@@ -21,11 +53,7 @@ function strategyFor(manifest: ViewerManifestV1): GeometryStrategy {
   return "unsupported";
 }
 
-function normalizeRuntimeStrategy(value: ViewerRuntimeStrategy): ViewerRuntimeStrategy {
-  return value;
-}
-
-export function normalizeViewerManifest(manifest: ViewerManifestV1): NormalizedPackagingModel {
+export function normalizeViewerManifest(manifest: ViewerManifestV1): ManifestBackedPackagingModel {
   const panels: PackagingPanel[] = manifest.faces.map((face) => ({
     id: face.faceKey,
     name: face.name || face.faceKey,
@@ -46,7 +74,7 @@ export function normalizeViewerManifest(manifest: ViewerManifestV1): NormalizedP
     },
   }));
 
-  const folds: PackagingFold[] = manifest.folds.map((fold) => ({
+  const folds: ManifestFoldModel[] = manifest.folds.map((fold) => ({
     id: fold.id,
     foldIndex: fold.foldIndex,
     parentPanelId: fold.parentFaceKey,
@@ -64,7 +92,7 @@ export function normalizeViewerManifest(manifest: ViewerManifestV1): NormalizedP
     if (child) child.parentId = fold.parentPanelId;
   }
 
-  const materials: PackagingMaterial[] = manifest.materials.map((material) => ({
+  const materials: ManifestMaterialModel[] = manifest.materials.map((material) => ({
     id: material.id,
     name: material.nameBg ?? material.nameEn ?? material.name,
     layer: material.layerKey,
@@ -79,17 +107,6 @@ export function normalizeViewerManifest(manifest: ViewerManifestV1): NormalizedP
     maps: material.maps,
   }));
 
-  const animations: PackagingAnimationSequence[] = manifest.animations.map((sequence) => ({
-    id: sequence.id,
-    name: sequence.name,
-    isDefault: sequence.isDefault,
-    steps: sequence.steps.map((step) => ({
-      stepIndex: step.stepIndex,
-      duration: step.duration,
-      operations: step.operations.map((operation) => ({ ...operation })),
-    })),
-  }));
-
   const dieline = manifest.dielines[0];
   const warnings = [...manifest.validation.warnings];
   if (manifest.validation.status === "invalid" || manifest.validation.status === "quarantined") {
@@ -99,13 +116,9 @@ export function normalizeViewerManifest(manifest: ViewerManifestV1): NormalizedP
     warnings.push(`production_status:${manifest.model.productionStatus}`);
   }
 
-  return {
+  const normalized: NormalizedPackagingModel = {
     id: `source-${manifest.product.sourceId}`,
     sourceId: manifest.product.sourceId,
-    sourceHash: manifest.sourceHash,
-    modelVersion: manifest.model.version,
-    productionStatus: manifest.model.productionStatus,
-    runtimeStrategy: normalizeRuntimeStrategy(manifest.runtimeStrategy),
     name: manifest.product.name,
     title: manifest.product.title,
     family: manifest.product.family,
@@ -144,10 +157,6 @@ export function normalizeViewerManifest(manifest: ViewerManifestV1): NormalizedP
         }
       : undefined,
     materials,
-    animations,
-    assets: manifest.assets,
-    exportCapabilities: manifest.exportCapabilities,
-    validation: manifest.validation,
     openParams: [],
     faceDirectionMap: Object.fromEntries(
       panels.filter((panel) => panel.direction).map((panel) => [panel.id, panel.direction!]),
@@ -158,6 +167,18 @@ export function normalizeViewerManifest(manifest: ViewerManifestV1): NormalizedP
         .map((panel) => [panel.id, panel.orientationRotate!]),
     ),
     warnings,
-    raw: { details: null, knife: null, preview: null, manifest },
+    raw: { details: null, knife: null, preview: null },
   };
+
+  return Object.assign(normalized, {
+    sourceHash: manifest.sourceHash,
+    modelVersion: manifest.model.version,
+    productionStatus: manifest.model.productionStatus,
+    runtimeStrategy: manifest.runtimeStrategy,
+    animations: manifest.animations,
+    assets: manifest.assets,
+    exportCapabilities: manifest.exportCapabilities,
+    validation: manifest.validation,
+    raw: { ...normalized.raw, manifest },
+  }) as ManifestBackedPackagingModel;
 }
