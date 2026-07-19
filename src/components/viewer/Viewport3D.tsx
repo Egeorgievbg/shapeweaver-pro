@@ -1,10 +1,11 @@
 import { Canvas, useThree } from "@react-three/fiber";
 import { OrbitControls, ContactShadows, Environment, Grid, Bounds, Html } from "@react-three/drei";
-import { Suspense, useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState, type RefObject } from "react";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import * as THREE from "three";
 import { useConfiguratorStore, type CameraPreset } from "@/stores/configurator";
-import { GeometryResolver } from "@/features/configurator/geometry/GeometryResolver";
+import { ManifestGeometryResolver } from "@/features/configurator/geometry/ManifestGeometryResolver";
+import { registerExportableViewport } from "@/features/configurator/export/viewportRegistry";
 import { detectWebGL } from "@/lib/webgl";
 import { AlertTriangle, Loader2 } from "lucide-react";
 
@@ -139,6 +140,24 @@ function CameraRig({ preset }: { preset: CameraPreset }) {
   );
 }
 
+function ExportRegistration({
+  rootRef,
+  sourceId,
+}: {
+  rootRef: RefObject<THREE.Group | null>;
+  sourceId: string;
+}) {
+  const { scene, camera, gl } = useThree();
+
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    return registerExportableViewport({ root, scene, camera, renderer: gl, sourceId });
+  }, [camera, gl, rootRef, scene, sourceId]);
+
+  return null;
+}
+
 export function Viewport3D() {
   const [webglStatus] = useState(() => detectWebGL());
   const model = useConfiguratorStore((state) => state.productModel);
@@ -149,6 +168,7 @@ export function Viewport3D() {
   const selectPanel = useConfiguratorStore((state) => state.selectPanel);
   const artwork = useArtworkTexture();
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const exportRootRef = useRef<THREE.Group>(null);
   const backgroundColor = scene.transparentBackground ? undefined : scene.backgroundColor;
 
   if (!webglStatus.ok) {
@@ -172,6 +192,8 @@ export function Viewport3D() {
       </div>
     );
   }
+
+  const runtimeStrategy = (model as { runtimeStrategy?: string }).runtimeStrategy;
 
   return (
     <div className="relative h-full min-h-[420px] w-full" style={{ backgroundColor }}>
@@ -211,7 +233,13 @@ export function Viewport3D() {
         )}
 
         {scene.showGrid && (
-          <Grid args={[20, 20]} position={[0, -1.15, 0]} cellColor="#c0c0c0" sectionColor="#888888" fadeDistance={20} />
+          <Grid
+            args={[20, 20]}
+            position={[0, -1.15, 0]}
+            cellColor="#c0c0c0"
+            sectionColor="#888888"
+            fadeDistance={20}
+          />
         )}
 
         <Suspense
@@ -224,16 +252,23 @@ export function Viewport3D() {
           }
         >
           <Bounds fit clip observe margin={1.35}>
-            <GeometryResolver
-              model={model}
-              artworkTexture={artwork.texture}
-              materialColor={material.color}
-              roughness={material.roughness}
-              metalness={material.metalness}
-              selectedPanelId={selectedPanelId}
-              onPanelClick={selectPanel}
-            />
+            <group
+              ref={exportRootRef}
+              name={`gptsboxes-product-${model.sourceId}`}
+              userData={{ sourceId: model.sourceId, runtimeStrategy }}
+            >
+              <ManifestGeometryResolver
+                model={model}
+                artworkTexture={artwork.texture}
+                materialColor={material.color}
+                roughness={material.roughness}
+                metalness={material.metalness}
+                selectedPanelId={selectedPanelId}
+                onPanelClick={selectPanel}
+              />
+            </group>
           </Bounds>
+          <ExportRegistration rootRef={exportRootRef} sourceId={model.sourceId} />
         </Suspense>
 
         {scene.contactShadows && (
@@ -250,12 +285,14 @@ export function Viewport3D() {
       )}
 
       <div className="pointer-events-none absolute left-4 top-4 rounded-md bg-black/60 px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider text-white backdrop-blur">
-        Geometry: {model.geometryStrategy === "gltf" ? "GLB / automatic fallback" : model.geometryStrategy}
+        Geometry: {runtimeStrategy ?? (model.geometryStrategy === "gltf" ? "GLB" : model.geometryStrategy)}
       </div>
     </div>
   );
 }
 
 export function useViewportCanvas() {
-  return typeof document !== "undefined" ? (document.querySelector("canvas") as HTMLCanvasElement | null) : null;
+  return typeof document !== "undefined"
+    ? (document.querySelector("canvas") as HTMLCanvasElement | null)
+    : null;
 }
