@@ -3,9 +3,9 @@ import { boxcraftFetch } from "./client";
 import { EP } from "./endpoints";
 import { zProductsPage, zRelations, type ProductsPageT, type RelationsT } from "./schemas";
 import { adaptListItem, type CatalogCard } from "./adapters";
-import { normalizePayloadPackage } from "./payload-normalizer";
 import { BoxcraftError } from "./errors";
 import { normalizeViewerManifest } from "@/features/configurator/manifest/adapter";
+import { compileLegacyPayloadManifest } from "@/features/configurator/manifest/legacyCompiler";
 import {
   isViewerManifestV1,
   type ViewerManifestV1,
@@ -14,7 +14,13 @@ import type { ApiPayloadPackage, NormalizedPackagingModel } from "./types";
 
 export * from "./types";
 export * from "./errors";
-export { boxcraftFetch, EP, adaptListItem, normalizePayloadPackage, normalizeViewerManifest };
+export {
+  boxcraftFetch,
+  EP,
+  adaptListItem,
+  normalizeViewerManifest,
+  compileLegacyPayloadManifest,
+};
 export type { CatalogCard, ViewerManifestV1 };
 
 export interface CatalogQuery {
@@ -30,7 +36,7 @@ export function useHealth() {
   return useQuery({
     queryKey: ["boxcraft", "health"],
     queryFn: async () => {
-      const [api, vis, cfg] = await Promise.allSettled([
+      const [api, visualization, configurator] = await Promise.allSettled([
         boxcraftFetch(EP.health),
         boxcraftFetch(EP.visHealth),
         boxcraftFetch(EP.configuratorHealth),
@@ -41,16 +47,20 @@ export function useHealth() {
             ? api.value
             : { error: String((api as PromiseRejectedResult).reason) },
         visualization:
-          vis.status === "fulfilled"
-            ? vis.value
-            : { error: String((vis as PromiseRejectedResult).reason) },
+          visualization.status === "fulfilled"
+            ? visualization.value
+            : { error: String((visualization as PromiseRejectedResult).reason) },
         configurator:
-          cfg.status === "fulfilled"
-            ? cfg.value
-            : { error: String((cfg as PromiseRejectedResult).reason) },
+          configurator.status === "fulfilled"
+            ? configurator.value
+            : { error: String((configurator as PromiseRejectedResult).reason) },
       };
 
-      return [api, vis, cfg].some((result) => result.status === "fulfilled") ? services : null;
+      return [api, visualization, configurator].some(
+        (result) => result.status === "fulfilled",
+      )
+        ? services
+        : null;
     },
     staleTime: 30_000,
   });
@@ -107,9 +117,8 @@ async function loadNormalizedProduct(
   }
 
   const payloadPackage = await boxcraftFetch<ApiPayloadPackage>(EP.payloads(sourceId), { signal });
-  const legacyModel = normalizePayloadPackage(sourceId, payloadPackage);
-  legacyModel.warnings.unshift("legacy_payload_adapter:viewer_manifest_endpoint_unavailable");
-  return legacyModel;
+  const compiledManifest = await compileLegacyPayloadManifest(sourceId, payloadPackage);
+  return normalizeViewerManifest(compiledManifest);
 }
 
 export function useNormalizedProduct(sourceId: string | undefined) {
