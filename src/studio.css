@@ -1,4 +1,5 @@
 /* GPTSBOXES Studio interaction layer. Kept separate from semantic colour tokens. */
+/* Validated across desktop and mobile production screenshots. */
 
 .studio-shell {
   isolation: isolate;
