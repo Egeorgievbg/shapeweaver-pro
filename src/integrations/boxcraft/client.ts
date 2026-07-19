@@ -18,7 +18,11 @@ export interface RequestOptions {
 
 function buildUrl(path: string, query?: RequestOptions["query"]): string {
   const base = BOXCRAFT_API_BASE_URL.replace(/\/+$/, "");
-  const url = new URL(path.startsWith("http") ? path : `${base}${path.startsWith("/") ? "" : "/"}${path}`);
+  const url = new URL(
+    path.startsWith("http")
+      ? path
+      : `${base}${path.startsWith("/") ? "" : "/"}${path}`,
+  );
   if (query) {
     for (const [key, value] of Object.entries(query)) {
       if (value === undefined || value === null || value === "") continue;
@@ -36,7 +40,10 @@ export async function boxcraftFetch<T = unknown>(
   const controller = new AbortController();
   const signal = opts.signal ?? controller.signal;
   const timeoutId = opts.timeoutMs
-    ? setTimeout(() => controller.abort(new DOMException("Timeout", "TimeoutError")), opts.timeoutMs)
+    ? setTimeout(
+        () => controller.abort(new DOMException("Timeout", "TimeoutError")),
+        opts.timeoutMs,
+      )
     : null;
 
   let response: Response;
@@ -81,7 +88,8 @@ export async function boxcraftFetch<T = unknown>(
   const type = opts.responseType ?? "json";
   try {
     if (type === "blob") return (await response.blob()) as unknown as T;
-    if (type === "arrayBuffer") return (await response.arrayBuffer()) as unknown as T;
+    if (type === "arrayBuffer")
+      return (await response.arrayBuffer()) as unknown as T;
     if (type === "text") return (await response.text()) as unknown as T;
     return (await response.json()) as T;
   } catch (error) {
