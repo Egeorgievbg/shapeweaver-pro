@@ -38,7 +38,7 @@ import {
   type AdminMethod,
 } from "@/integrations/admin/client";
 import { BOXCRAFT_API_BASE_URL } from "@/lib/env";
-import { MESSAGES, useI18n } from "@/lib/i18n";
+import { MESSAGES, useI18n } from "@/lib/admin-i18n";
 import { cn } from "@/lib/utils";
 
 type ModuleId =
