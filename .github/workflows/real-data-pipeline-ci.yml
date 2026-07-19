@@ -65,10 +65,21 @@ jobs:
       - name: Compile audit scripts
         run: python -m py_compile scripts/audit_core.py scripts/data_audit.py
       - name: Run read-only repository audit
-        run: python scripts/data_audit.py . --output data/reports
+        shell: bash
+        run: |
+          set +e
+          python scripts/data_audit.py . --output data/reports > audit-console.json
+          echo "$?" > audit-exit-status.txt
+          cat audit-console.json
+          exit 0
       - name: Upload audit reports
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: real-data-file-and-source-audit
-          path: data/reports
+          path: |
+            data/reports
+            audit-console.json
+            audit-exit-status.txt
+          if-no-files-found: error
           retention-days: 7
