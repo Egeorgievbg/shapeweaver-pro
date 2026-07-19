@@ -31,12 +31,22 @@ export function useHealth() {
         boxcraftFetch(EP.visHealth),
         boxcraftFetch(EP.configuratorHealth),
       ]);
-      return {
-        api: api.status === "fulfilled" ? api.value : { error: String((api as PromiseRejectedResult).reason) },
-        visualization: vis.status === "fulfilled" ? vis.value : { error: String((vis as PromiseRejectedResult).reason) },
+      const services = {
+        api:
+          api.status === "fulfilled"
+            ? api.value
+            : { error: String((api as PromiseRejectedResult).reason) },
+        visualization:
+          vis.status === "fulfilled"
+            ? vis.value
+            : { error: String((vis as PromiseRejectedResult).reason) },
         configurator:
-          cfg.status === "fulfilled" ? cfg.value : { error: String((cfg as PromiseRejectedResult).reason) },
+          cfg.status === "fulfilled"
+            ? cfg.value
+            : { error: String((cfg as PromiseRejectedResult).reason) },
       };
+
+      return [api, vis, cfg].some((result) => result.status === "fulfilled") ? services : null;
     },
     staleTime: 30_000,
   });
