@@ -1,4 +1,4 @@
-import { BOXCRAFT_API_BASE_URL } from "@/lib/env";
+import { ADMIN_API_BASE_URL } from "@/lib/env";
 
 export type AdminMethod = "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
 
@@ -18,7 +18,14 @@ export interface AdminCapabilitiesResponse {
   generated_at?: string;
 }
 
+export interface AdminSessionResponse {
+  ok: boolean;
+  authenticated: boolean;
+  expires_at?: string;
+}
+
 export const ADMIN_RESOURCES = {
+  session: "/api/admin/session",
   capabilities: "/api/admin/capabilities",
   products: "/api/admin/products",
   taxonomy: "/api/admin/taxonomy",
@@ -51,7 +58,8 @@ export class AdminApiError extends Error {
 
 function buildUrl(path: string) {
   if (/^https?:\/\//.test(path)) return path;
-  const base = BOXCRAFT_API_BASE_URL.replace(/\/+$/, "");
+  const base = ADMIN_API_BASE_URL.replace(/\/+$/, "");
+  if (!base) return path.startsWith("/") ? path : `/${path}`;
   return `${base}${path.startsWith("/") ? "" : "/"}${path}`;
 }
 
@@ -76,7 +84,6 @@ export async function adminRequest<T = unknown>(
         Accept: "application/json",
         "Content-Type": "application/json",
         "X-Requested-With": "GPTSBOXES-Admin",
-        "ngrok-skip-browser-warning": "true",
         ...(options.headers ?? {}),
       },
       body: options.body === undefined ? undefined : JSON.stringify(options.body),
@@ -99,7 +106,9 @@ export async function adminRequest<T = unknown>(
         ? "Administrator authentication is required."
         : response.status === 404
           ? "This administration capability is not implemented by the backend."
-          : `Administration request failed (${response.status}).`,
+          : response.status === 503
+            ? "The secure administration gateway is not configured."
+            : `Administration request failed (${response.status}).`,
       response.status,
       { url, payload },
     );
