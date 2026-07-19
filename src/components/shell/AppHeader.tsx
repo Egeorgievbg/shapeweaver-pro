@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Boxes, ChevronDown, Languages, Moon, Search, Sun } from "lucide-react";
+import { Boxes, Languages, Moon, Search, Sun } from "lucide-react";
 import { useTheme } from "@/hooks/use-theme";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -24,7 +24,7 @@ export function AppHeader() {
         isStudio && "h-12",
       )}
     >
-      <Link to="/" className="flex min-w-0 items-center gap-2.5">
+      <Link to="/" className="flex min-w-0 items-center gap-2.5" aria-label={t("nav.home")}>
         <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-sm">
           <Boxes className="h-4 w-4" />
         </span>
@@ -39,7 +39,7 @@ export function AppHeader() {
       </Link>
 
       {!isStudio && (
-        <nav className="ml-3 hidden items-center gap-1 md:flex">
+        <nav className="ml-3 hidden items-center gap-1 md:flex" aria-label={t("nav.home")}>
           {nav.map((item) => (
             <Link
               key={item.to}
@@ -57,21 +57,27 @@ export function AppHeader() {
         <Link
           to="/library"
           className="ml-auto hidden w-full max-w-xs items-center gap-2 rounded-lg border border-input bg-surface-2 px-3 py-2 text-xs text-muted-foreground lg:flex"
+          aria-label={t("nav.search")}
         >
-          <Search className="h-3.5 w-3.5" /> Search packaging structures
+          <Search className="h-3.5 w-3.5" /> {t("nav.search")}
         </Link>
       )}
 
       <div className={cn("flex items-center gap-1", isStudio ? "ml-auto" : "ml-auto lg:ml-2")}>
-        <button
-          onClick={() => setLocale(locale === "en" ? "bg" : "en")}
-          className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground hover:bg-accent hover:text-foreground"
-          aria-label="Toggle language"
-        >
-          <Languages className="h-3.5 w-3.5" /> {locale}
-          <ChevronDown className="h-3 w-3" />
-        </button>
-        <button onClick={toggle} className="studio-icon-button" aria-label="Toggle theme">
+        <label className="relative inline-flex items-center">
+          <span className="sr-only">{t("language.label")}</span>
+          <Languages className="pointer-events-none absolute left-2.5 h-3.5 w-3.5 text-muted-foreground" />
+          <select
+            value={locale}
+            onChange={(event) => setLocale(event.target.value === "en" ? "en" : "bg")}
+            className="h-9 appearance-none rounded-lg border border-transparent bg-transparent pl-8 pr-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground outline-none hover:bg-accent hover:text-foreground focus:border-input"
+            aria-label={t("language.label")}
+          >
+            <option value="bg">BG · {t("language.bg")}</option>
+            <option value="en">EN · {t("language.en")}</option>
+          </select>
+        </label>
+        <button onClick={toggle} className="studio-icon-button" aria-label={t("theme.toggle")} title={t("theme.toggle")}>
           {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
         </button>
       </div>
