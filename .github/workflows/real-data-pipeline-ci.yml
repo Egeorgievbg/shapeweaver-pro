@@ -34,11 +34,14 @@ jobs:
             src/features/configurator/geometry/ManifestGeometryResolver.tsx \
             src/features/configurator/manifest/adapter.ts \
             src/features/configurator/manifest/types.ts \
+            src/features/configurator/manifest/legacyCompiler.ts \
+            src/features/configurator/manifest/legacy/animationTools.ts \
+            src/features/configurator/manifest/legacy/layerTools.ts \
+            src/features/configurator/manifest/legacy/pathTools.ts \
             src/integrations/boxcraft/endpoints.ts \
             src/integrations/boxcraft/index.ts \
             src/lib/i18n-overrides.ts \
-            scripts/audit_core.py \
-            scripts/data_audit.py \
+            docs/SOURCE_OF_TRUTH.md \
             .github/workflows/real-data-pipeline-ci.yml
       - name: ESLint changed TypeScript scope
         run: |
@@ -52,6 +55,10 @@ jobs:
             src/features/configurator/geometry/ManifestGeometryResolver.tsx \
             src/features/configurator/manifest/adapter.ts \
             src/features/configurator/manifest/types.ts \
+            src/features/configurator/manifest/legacyCompiler.ts \
+            src/features/configurator/manifest/legacy/animationTools.ts \
+            src/features/configurator/manifest/legacy/layerTools.ts \
+            src/features/configurator/manifest/legacy/pathTools.ts \
             src/integrations/boxcraft/endpoints.ts \
             src/integrations/boxcraft/index.ts \
             src/lib/i18n-overrides.ts
