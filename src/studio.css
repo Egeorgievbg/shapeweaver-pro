@@ -145,6 +145,15 @@ textarea:focus-visible {
   }
 }
 
+/* The interaction class is loaded after Tailwind's generated stylesheet.
+   This explicit rule prevents its default inline-flex display from reviving
+   controls marked as desktop-hidden by the responsive utility token. */
+@media (min-width: 1024px) {
+  .studio-secondary-button[class~="lg:hidden"] {
+    display: none !important;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
