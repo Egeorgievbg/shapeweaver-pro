@@ -1,9 +1,4 @@
-import {
-  MESSAGES,
-  translate,
-  type TranslationValues,
-  useI18n as useBaseI18n,
-} from "@/lib/i18n";
+import { MESSAGES, translate, type TranslationValues, useI18n as useBaseI18n } from "@/lib/i18n";
 
 export { MESSAGES };
 
@@ -12,8 +7,7 @@ const ADMIN_OVERRIDES: Record<"bg" | "en", Record<string, string>> = {
     "admin.capabilities": "Възможности на сървъра",
     "admin.endpoint": "Крайна точка",
     "admin.unsupported": "Сървърът не предоставя тази операция.",
-    "admin.connectionRequired":
-      "Необходим е активен BoxCraft API или прокси от същия домейн.",
+    "admin.connectionRequired": "Необходим е активен BoxCraft API или прокси от същия домейн.",
     "admin.slug": "Системен адрес (slug)",
     "admin.technicalDiagnostics": "Техническа диагностика",
   },
