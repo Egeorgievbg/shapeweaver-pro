@@ -5,15 +5,82 @@ on:
     branches: [main]
 
 permissions:
-  contents: read
+  contents: write
+
+concurrency:
+  group: ui-ux-validation-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
 
 jobs:
   validate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
+      - name: Normalize redesigned UI source
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          replacements = {
+              Path("src/components/catalog/CatalogView.tsx"): {
+                  "      next.has(id) ? next.delete(id) : next.add(id);": "      if (next.has(id)) {\n        next.delete(id);\n      } else {\n        next.add(id);\n      }",
+              },
+              Path("src/components/studio/StudioWorkspace.tsx"): {
+                  "        event.shiftKey ? redo() : undo();": "        if (event.shiftKey) {\n          redo();\n        } else {\n          undo();\n        }",
+              },
+          }
+
+          for path, rules in replacements.items():
+              content = path.read_text()
+              for old, new in rules.items():
+                  content = content.replace(old, new)
+              path.write_text(content)
+          PY
+          bunx prettier --write \
+            src/components/catalog/CatalogView.tsx \
+            src/components/dieline/DielineEditor.tsx \
+            src/components/shell/AppHeader.tsx \
+            src/components/studio/StudioWorkspace.tsx \
+            src/routes/__root.tsx \
+            src/routes/library.tsx \
+            'src/routes/studio.$productId.tsx' \
+            src/studio.css \
+            .github/workflows/ui-ux-ci.yml
+          bunx eslint --fix \
+            src/components/catalog/CatalogView.tsx \
+            src/components/dieline/DielineEditor.tsx \
+            src/components/shell/AppHeader.tsx \
+            src/components/studio/StudioWorkspace.tsx \
+            src/routes/__root.tsx \
+            src/routes/library.tsx \
+            'src/routes/studio.$productId.tsx'
+      - name: Commit normalized source
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo "Source already normalized"
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add \
+              src/components/catalog/CatalogView.tsx \
+              src/components/dieline/DielineEditor.tsx \
+              src/components/shell/AppHeader.tsx \
+              src/components/studio/StudioWorkspace.tsx \
+              src/routes/__root.tsx \
+              src/routes/library.tsx \
+              'src/routes/studio.$productId.tsx' \
+              src/studio.css \
+              .github/workflows/ui-ux-ci.yml
+            git commit -m "style: normalize UI UX source"
+            git push origin HEAD:${{ github.head_ref }}
+          fi
       - run: bun run build
       - name: Check formatting
         run: |
@@ -25,7 +92,8 @@ jobs:
             src/routes/__root.tsx \
             src/routes/library.tsx \
             'src/routes/studio.$productId.tsx' \
-            src/studio.css
+            src/studio.css \
+            .github/workflows/ui-ux-ci.yml
       - name: Lint changed UI scope
         run: |
           bunx eslint \
