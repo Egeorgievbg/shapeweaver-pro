@@ -1,0 +1,126 @@
+name: Fix keyed localization isolation
+
+on:
+  push:
+    branches: [feature/bg-en-admin-control-center]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: fix-keyed-localization-isolation
+  cancel-in-progress: true
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/bg-en-admin-control-center
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - name: Isolate keyed localized screens from the legacy bridge
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          replacements = {
+              Path("src/components/admin/AdminControlCenter.tsx"): [
+                  (
+                      '<div className="min-h-[calc(100dvh-3.5rem)] bg-surface-2/45">',
+                      '<div data-i18n-skip="true" className="min-h-[calc(100dvh-3.5rem)] bg-surface-2/45">',
+                  ),
+              ],
+              Path("src/components/admin/AdminAuthGate.tsx"): [
+                  (
+                      '<div className="flex min-h-[calc(100dvh-3.5rem)] items-center justify-center bg-surface-2/45">',
+                      '<div data-i18n-skip="true" className="flex min-h-[calc(100dvh-3.5rem)] items-center justify-center bg-surface-2/45">',
+                  ),
+                  (
+                      'return <AdminControlCenter />;',
+                      'return <div data-i18n-skip="true"><AdminControlCenter /></div>;',
+                  ),
+                  (
+                      '<div className="flex min-h-[calc(100dvh-3.5rem)] items-center justify-center bg-surface-2/45 px-4 py-12">',
+                      '<div data-i18n-skip="true" className="flex min-h-[calc(100dvh-3.5rem)] items-center justify-center bg-surface-2/45 px-4 py-12">',
+                  ),
+                  (
+                      '<div className="relative">',
+                      '<div data-i18n-skip="true" className="relative">',
+                  ),
+                  (
+                      'Той се изпраща само към same-origin gateway и не се запазва в браузъра.',
+                      'Той се изпраща само към защитения gateway от същия домейн и не се запазва в браузъра.',
+                  ),
+                  (
+                      'Защитеният административен gateway не отговори.',
+                      'Защитеният административен шлюз не отговори.',
+                  ),
+              ],
+              Path("src/components/shell/AppHeader.tsx"): [
+                  (
+                      '<header\n      className={cn(',
+                      '<header\n      data-i18n-skip="true"\n      className={cn(',
+                  ),
+              ],
+              Path("src/routes/index.tsx"): [
+                  (
+                      '<div className="mx-auto flex w-full max-w-6xl flex-col gap-16 px-6 py-20 lg:py-28">',
+                      '<div data-i18n-skip="true" className="mx-auto flex w-full max-w-6xl flex-col gap-16 px-6 py-20 lg:py-28">',
+                  ),
+              ],
+              Path("src/routes/configurations.tsx"): [
+                  (
+                      '<div className="mx-auto w-full max-w-5xl px-6 py-8">',
+                      '<div data-i18n-skip="true" className="mx-auto w-full max-w-5xl px-6 py-8">',
+                  ),
+              ],
+              Path("src/lib/i18n.ts"): [
+                  (
+                      'Операциите за запис се активират само при налични защитени admin API endpoints.',
+                      'Операциите за запис се активират само при налични защитени административни API крайни точки.',
+                  ),
+              ],
+          }
+
+          for path, rules in replacements.items():
+              content = path.read_text()
+              for old, new in rules:
+                  if old not in content:
+                      raise SystemExit(f"Expected text not found in {path}: {old}")
+                  content = content.replace(old, new, 1)
+              path.write_text(content)
+          PY
+          bunx prettier --write \
+            src/components/admin/AdminControlCenter.tsx \
+            src/components/admin/AdminAuthGate.tsx \
+            src/components/shell/AppHeader.tsx \
+            src/routes/index.tsx \
+            src/routes/configurations.tsx \
+            src/lib/i18n.ts
+          bunx eslint --fix \
+            src/components/admin/AdminControlCenter.tsx \
+            src/components/admin/AdminAuthGate.tsx \
+            src/components/shell/AppHeader.tsx \
+            src/routes/index.tsx \
+            src/routes/configurations.tsx \
+            src/lib/i18n.ts
+      - name: Commit localization isolation
+        run: |
+          if git diff --quiet; then
+            echo "Localization isolation already applied"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            src/components/admin/AdminControlCenter.tsx \
+            src/components/admin/AdminAuthGate.tsx \
+            src/components/shell/AppHeader.tsx \
+            src/routes/index.tsx \
+            src/routes/configurations.tsx \
+            src/lib/i18n.ts
+          git commit -m "fix: isolate keyed translations from legacy bridge"
+          git push origin HEAD:feature/bg-en-admin-control-center
