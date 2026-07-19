@@ -1,0 +1,49 @@
+name: Apply admin i18n hook
+
+on:
+  push:
+    branches: [feature/bg-en-admin-control-center]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apply-admin-i18n-hook
+  cancel-in-progress: true
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/bg-en-admin-control-center
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - name: Route admin translations through the specialized hook
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path("src/components/admin/AdminControlCenter.tsx")
+          content = path.read_text()
+          old = 'import { MESSAGES, useI18n } from "@/lib/i18n";'
+          new = 'import { MESSAGES, useI18n } from "@/lib/admin-i18n";'
+          if old in content:
+              path.write_text(content.replace(old, new, 1))
+          elif new not in content:
+              raise SystemExit("Admin i18n import was not found")
+          PY
+          bunx prettier --write src/components/admin/AdminControlCenter.tsx
+          bunx eslint --fix src/components/admin/AdminControlCenter.tsx
+      - name: Commit admin translation migration
+        run: |
+          if git diff --quiet; then
+            echo "Admin hook already applied"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/components/admin/AdminControlCenter.tsx
+          git commit -m "fix: use specialized bilingual admin translations"
+          git push origin HEAD:feature/bg-en-admin-control-center
