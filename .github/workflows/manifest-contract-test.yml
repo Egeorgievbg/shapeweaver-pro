@@ -1,0 +1,24 @@
+name: Viewer manifest contract validation
+
+on:
+  push:
+    branches: [feature/real-data-manifest-export-pipeline]
+  pull_request:
+    branches: [feature/bg-en-admin-control-center, main]
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - name: Check test formatting
+        run: bunx prettier --check scripts/qa/manifest-contract.ts .github/workflows/manifest-contract-test.yml
+      - name: Lint test
+        run: bunx eslint scripts/qa/manifest-contract.ts
+      - name: Run multi-layer manifest contract
+        run: bun scripts/qa/manifest-contract.ts
