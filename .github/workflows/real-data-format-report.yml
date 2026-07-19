@@ -16,11 +16,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
-      - name: List different files
+      - name: Capture Prettier diagnostics
         shell: bash
         run: |
           set +e
-          bunx prettier --list-different \
+          bunx prettier --check \
             src/components/export/ExportDialog.tsx \
             src/components/viewer/Viewport3D.tsx \
             src/features/configurator/export/nativeExporters.ts \
@@ -38,10 +38,14 @@ jobs:
             src/integrations/boxcraft/index.ts \
             src/lib/i18n-overrides.ts \
             docs/SOURCE_OF_TRUTH.md \
-            .github/workflows/real-data-pipeline-ci.yml > format-differences.txt
+            .github/workflows/real-data-pipeline-ci.yml > prettier-output.txt 2>&1
+          echo "$?" > prettier-status.txt
+          cat prettier-output.txt
           exit 0
       - uses: actions/upload-artifact@v4
         with:
-          name: real-data-format-differences
-          path: format-differences.txt
+          name: real-data-format-diagnostics
+          path: |
+            prettier-output.txt
+            prettier-status.txt
           retention-days: 2
