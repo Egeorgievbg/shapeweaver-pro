@@ -1,0 +1,72 @@
+name: Format bilingual admin branch
+
+on:
+  push:
+    branches: [feature/bg-en-admin-control-center]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: format-bg-en-admin
+  cancel-in-progress: true
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/bg-en-admin-control-center
+          fetch-depth: 0
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - name: Format changed application scope
+        run: |
+          bunx prettier --write \
+            src/components/admin/AdminControlCenter.tsx \
+            src/components/i18n/RuntimeLocalizationBridge.tsx \
+            src/components/shell/AppHeader.tsx \
+            src/integrations/admin/client.ts \
+            src/lib/i18n.ts \
+            src/routes/__root.tsx \
+            src/routes/admin.data.tsx \
+            src/routes/configurations.tsx \
+            src/routes/index.tsx \
+            src/stores/persistence.ts \
+            .github/workflows/ui-ux-ci.yml \
+            .github/workflows/format-bg-en-admin.yml
+          bunx eslint --fix \
+            src/components/admin/AdminControlCenter.tsx \
+            src/components/i18n/RuntimeLocalizationBridge.tsx \
+            src/components/shell/AppHeader.tsx \
+            src/integrations/admin/client.ts \
+            src/lib/i18n.ts \
+            src/routes/__root.tsx \
+            src/routes/admin.data.tsx \
+            src/routes/configurations.tsx \
+            src/routes/index.tsx \
+            src/stores/persistence.ts
+      - name: Commit formatter output
+        run: |
+          if git diff --quiet; then
+            echo "Already formatted"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add \
+            src/components/admin/AdminControlCenter.tsx \
+            src/components/i18n/RuntimeLocalizationBridge.tsx \
+            src/components/shell/AppHeader.tsx \
+            src/integrations/admin/client.ts \
+            src/lib/i18n.ts \
+            src/routes/__root.tsx \
+            src/routes/admin.data.tsx \
+            src/routes/configurations.tsx \
+            src/routes/index.tsx \
+            src/stores/persistence.ts \
+            .github/workflows/ui-ux-ci.yml \
+            .github/workflows/format-bg-en-admin.yml
+          git commit -m "style: format bilingual admin implementation"
+          git push origin HEAD:feature/bg-en-admin-control-center
