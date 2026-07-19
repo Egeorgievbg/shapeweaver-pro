@@ -202,10 +202,7 @@ async function handleAdminSession(request: Request, env: unknown) {
   return jsonResponse({ ok: true, authenticated });
 }
 
-async function handleBoxcraftGateway(
-  request: Request,
-  env: unknown,
-): Promise<Response | null> {
+async function handleBoxcraftGateway(request: Request, env: unknown): Promise<Response | null> {
   const url = new URL(request.url);
   if (!url.pathname.startsWith("/api/boxcraft")) return null;
 
