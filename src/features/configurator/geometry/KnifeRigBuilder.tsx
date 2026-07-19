@@ -8,10 +8,7 @@ import type {
 import { buildFoldGraph, type FoldNode } from "./FoldGraph";
 import { buildPanelGeometry } from "./PanelGeometry";
 import { useConfiguratorStore } from "@/stores/configurator";
-import {
-  evaluatePackagingAnimation,
-  type EvaluatedAnimationState,
-} from "./AnimationEvaluator";
+import { evaluatePackagingAnimation, type EvaluatedAnimationState } from "./AnimationEvaluator";
 
 interface KnifeRigProps {
   model: NormalizedPackagingModel;
@@ -97,11 +94,7 @@ export function KnifeRigBuilder(props: KnifeRigProps) {
   return (
     <group
       scale={[sceneScale, -sceneScale, sceneScale]}
-      position={[
-        (-dielineSize.width / 2) * sceneScale,
-        (dielineSize.height / 2) * sceneScale,
-        0,
-      ]}
+      position={[(-dielineSize.width / 2) * sceneScale, (dielineSize.height / 2) * sceneScale, 0]}
       userData={{
         sourceId: props.model.sourceId,
         geometryStrategy: props.model.geometryStrategy,
@@ -192,9 +185,7 @@ function PanelNode(props: PanelNodeProps) {
   const geometry = props.geometries.get(props.node.panel.id) ?? null;
   const selected = props.selectedPanelId === props.node.panel.id;
   const panelTransform = props.animationState.panelTransforms.get(props.node.panel.id);
-  const basePosition = props.isRoot
-    ? new THREE.Vector3(0, 0, 0)
-    : hinge.localPivot.clone();
+  const basePosition = props.isRoot ? new THREE.Vector3(0, 0, 0) : hinge.localPivot.clone();
   if (panelTransform) basePosition.add(panelTransform.translation);
   const combinedQuaternion = hinge.quaternion.clone();
   if (panelTransform) combinedQuaternion.multiply(panelTransform.rotation);
@@ -290,10 +281,7 @@ function FlatPanel({
   if (!geometry) return null;
   const transform = animationState.panelTransforms.get(panel.id);
   return (
-    <group
-      position={transform?.translation}
-      quaternion={transform?.rotation}
-    >
+    <group position={transform?.translation} quaternion={transform?.rotation}>
       <SelectablePanelMesh
         panelId={panel.id}
         geometry={geometry.geometry}

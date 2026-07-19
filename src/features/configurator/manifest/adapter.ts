@@ -150,9 +150,7 @@ export function normalizeViewerManifest(manifest: ViewerManifestV1): ManifestBac
           bleedline: dieline.bleedline,
           faces: panels,
           folds,
-          holes: manifest.faces.flatMap((face) =>
-            (face.holes ?? []).map((path) => ({ d: path })),
-          ),
+          holes: manifest.faces.flatMap((face) => (face.holes ?? []).map((path) => ({ d: path }))),
           sizeArrows: [],
         }
       : undefined,

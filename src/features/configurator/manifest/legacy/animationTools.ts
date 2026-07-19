@@ -1,8 +1,4 @@
-import type {
-  ManifestAnimationOperation,
-  ManifestAnimationSequence,
-  ManifestFold,
-} from "../types";
+import type { ManifestAnimationOperation, ManifestAnimationSequence, ManifestFold } from "../types";
 import { asRecord, finiteNumber, vectorTuple, type UnknownRecord } from "./pathTools";
 
 function isOperation(value: unknown): boolean {
@@ -39,9 +35,7 @@ function stepDuration(step: UnknownRecord): number | undefined {
   }
   const start = finiteNumber(step.start, Number.NaN);
   const end = finiteNumber(step.end, Number.NaN);
-  return Number.isFinite(start) && Number.isFinite(end) && end > start
-    ? end - start
-    : undefined;
+  return Number.isFinite(start) && Number.isFinite(end) && end > start ? end - start : undefined;
 }
 
 function compileOperation(

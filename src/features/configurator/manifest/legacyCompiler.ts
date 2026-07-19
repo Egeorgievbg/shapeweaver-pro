@@ -14,20 +14,17 @@ import type {
 } from "./types";
 import { compileLayerAnimations } from "./legacy/animationTools";
 import { compileLayer, getLayerEntries } from "./legacy/layerTools";
-import {
-  asRecord,
-  buildFaceDirectionMap,
-  positiveNumber,
-  sha256Json,
-} from "./legacy/pathTools";
+import { asRecord, buildFaceDirectionMap, positiveNumber, sha256Json } from "./legacy/pathTools";
 
 function unwrapPayloads(pkg: ApiPayloadPackage) {
   return {
     details: pkg.payloads.details?.payload?.payload as RawDetailsBody | undefined,
-    knife: (pkg.payloads.knife?.payload?.data ??
-      pkg.payloads.knife?.payload?.payload) as RawKnifeBody | undefined,
-    preview: (pkg.payloads.preview?.payload?.data ??
-      pkg.payloads.preview?.payload?.payload) as RawPreviewBody | undefined,
+    knife: (pkg.payloads.knife?.payload?.data ?? pkg.payloads.knife?.payload?.payload) as
+      | RawKnifeBody
+      | undefined,
+    preview: (pkg.payloads.preview?.payload?.data ?? pkg.payloads.preview?.payload?.payload) as
+      | RawPreviewBody
+      | undefined,
   };
 }
 
@@ -48,14 +45,7 @@ export async function compileLegacyPayloadManifest(
   let nextFoldIndex = 0;
 
   for (const [layerKey, layer] of getLayerEntries(knife)) {
-    const compiled = compileLayer(
-      sourceId,
-      layerKey,
-      layer,
-      knife,
-      directions,
-      nextFoldIndex,
-    );
+    const compiled = compileLayer(sourceId, layerKey, layer, knife, directions, nextFoldIndex);
     faces.push(...compiled.faces);
     folds.push(...compiled.folds);
     dielines.push(compiled.dieline);

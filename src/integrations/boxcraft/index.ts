@@ -6,21 +6,12 @@ import { adaptListItem, type CatalogCard } from "./adapters";
 import { BoxcraftError } from "./errors";
 import { normalizeViewerManifest } from "@/features/configurator/manifest/adapter";
 import { compileLegacyPayloadManifest } from "@/features/configurator/manifest/legacyCompiler";
-import {
-  isViewerManifestV1,
-  type ViewerManifestV1,
-} from "@/features/configurator/manifest/types";
+import { isViewerManifestV1, type ViewerManifestV1 } from "@/features/configurator/manifest/types";
 import type { ApiPayloadPackage, NormalizedPackagingModel } from "./types";
 
 export * from "./types";
 export * from "./errors";
-export {
-  boxcraftFetch,
-  EP,
-  adaptListItem,
-  normalizeViewerManifest,
-  compileLegacyPayloadManifest,
-};
+export { boxcraftFetch, EP, adaptListItem, normalizeViewerManifest, compileLegacyPayloadManifest };
 export type { CatalogCard, ViewerManifestV1 };
 
 export interface CatalogQuery {
@@ -56,9 +47,7 @@ export function useHealth() {
             : { error: String((configurator as PromiseRejectedResult).reason) },
       };
 
-      return [api, visualization, configurator].some(
-        (result) => result.status === "fulfilled",
-      )
+      return [api, visualization, configurator].some((result) => result.status === "fulfilled")
         ? services
         : null;
     },

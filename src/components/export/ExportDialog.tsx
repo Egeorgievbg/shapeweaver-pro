@@ -15,14 +15,7 @@ import {
   exportNative3D,
   type Native3DFormat,
 } from "@/features/configurator/export/nativeExporters";
-import {
-  Box,
-  ChevronDown,
-  Download,
-  FileCode,
-  FileJson,
-  Image as ImageIcon,
-} from "lucide-react";
+import { Box, ChevronDown, Download, FileCode, FileJson, Image as ImageIcon } from "lucide-react";
 
 type Format = "png" | "json" | "svg" | Native3DFormat;
 type Resolution = "1920" | "2048" | "3840" | "4096";
@@ -273,7 +266,9 @@ function FormatButton({
 
 function buildDielineSvg(
   name: string,
-  dieline: NonNullable<ReturnType<typeof useConfiguratorStore.getState>["productModel"]>["dieline"] extends infer Value
+  dieline: NonNullable<
+    ReturnType<typeof useConfiguratorStore.getState>["productModel"]
+  >["dieline"] extends infer Value
     ? Value extends { totalX: number }
       ? Value
       : never
@@ -333,7 +328,6 @@ function escapeXml(value: string): string {
   return value.replace(
     /[&<>"]/g,
     (character) =>
-      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[character] ??
-      character,
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[character] ?? character,
   );
 }

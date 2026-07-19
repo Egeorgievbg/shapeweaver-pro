@@ -23,7 +23,8 @@ export const EP = {
 
   configuratorCatalog: "/api/configurator/catalog",
   configuratorProduct: (id: string) => `/api/configurator/products/${encodeURIComponent(id)}`,
-  configuratorDieline: (id: string) => `/api/configurator/products/${encodeURIComponent(id)}/dieline`,
+  configuratorDieline: (id: string) =>
+    `/api/configurator/products/${encodeURIComponent(id)}/dieline`,
   configuratorSourcePayloads: (id: string) =>
     `/api/configurator/products/${encodeURIComponent(id)}/source-payloads`,
   assetsManifest: "/api/configurator/assets-manifest",

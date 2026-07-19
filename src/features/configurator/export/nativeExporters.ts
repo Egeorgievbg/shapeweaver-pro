@@ -15,24 +15,99 @@ export interface ExportCapability {
 
 export const EXPORT_CAPABILITIES: ExportCapability[] = [
   { id: "json", group: "project", support: "native", note: "Configuration and manifest data." },
-  { id: "zip", group: "project", support: "conditional", note: "Requires a project-package builder and asset collection." },
-  { id: "glb", group: "3d", support: "native", note: "Current exact viewport pose, materials and artwork textures." },
-  { id: "gltf", group: "3d", support: "native", note: "JSON glTF with embedded data URIs where supported by Three.js." },
-  { id: "obj", group: "3d", support: "native", note: "Current mesh pose. Material textures are not embedded." },
-  { id: "stl", group: "3d", support: "native", note: "Current mesh pose only; no colors, materials or artwork." },
+  {
+    id: "zip",
+    group: "project",
+    support: "conditional",
+    note: "Requires a project-package builder and asset collection.",
+  },
+  {
+    id: "glb",
+    group: "3d",
+    support: "native",
+    note: "Current exact viewport pose, materials and artwork textures.",
+  },
+  {
+    id: "gltf",
+    group: "3d",
+    support: "native",
+    note: "JSON glTF with embedded data URIs where supported by Three.js.",
+  },
+  {
+    id: "obj",
+    group: "3d",
+    support: "native",
+    note: "Current mesh pose. Material textures are not embedded.",
+  },
+  {
+    id: "stl",
+    group: "3d",
+    support: "native",
+    note: "Current mesh pose only; no colors, materials or artwork.",
+  },
   { id: "ply", group: "3d", support: "native", note: "ASCII triangle mesh in the current pose." },
-  { id: "3mf", group: "3d", support: "server-converted", note: "Requires a verified unit/material conversion worker." },
-  { id: "usdz", group: "3d", support: "server-converted", note: "Requires an Apple-compatible USD conversion worker." },
-  { id: "fbx", group: "3d", support: "server-converted", note: "Requires a validated server converter." },
-  { id: "svg", group: "2d", support: "native", note: "Dieline preview with source cut and fold paths." },
-  { id: "pdf", group: "2d", support: "server-converted", note: "Requires layered PDF/preflight generation." },
-  { id: "dxf", group: "2d", support: "server-converted", note: "Requires a verified layer- and unit-aware converter." },
+  {
+    id: "3mf",
+    group: "3d",
+    support: "server-converted",
+    note: "Requires a verified unit/material conversion worker.",
+  },
+  {
+    id: "usdz",
+    group: "3d",
+    support: "server-converted",
+    note: "Requires an Apple-compatible USD conversion worker.",
+  },
+  {
+    id: "fbx",
+    group: "3d",
+    support: "server-converted",
+    note: "Requires a validated server converter.",
+  },
+  {
+    id: "svg",
+    group: "2d",
+    support: "native",
+    note: "Dieline preview with source cut and fold paths.",
+  },
+  {
+    id: "pdf",
+    group: "2d",
+    support: "server-converted",
+    note: "Requires layered PDF/preflight generation.",
+  },
+  {
+    id: "dxf",
+    group: "2d",
+    support: "server-converted",
+    note: "Requires a verified layer- and unit-aware converter.",
+  },
   { id: "png", group: "image", support: "native", note: "Current viewport render." },
-  { id: "tiff", group: "image", support: "server-converted", note: "Requires a high-resolution image worker." },
-  { id: "webm", group: "video", support: "conditional", note: "Requires deterministic frame capture and codec support." },
+  {
+    id: "tiff",
+    group: "image",
+    support: "server-converted",
+    note: "Requires a high-resolution image worker.",
+  },
+  {
+    id: "webm",
+    group: "video",
+    support: "conditional",
+    note: "Requires deterministic frame capture and codec support.",
+  },
   { id: "mp4", group: "video", support: "server-converted", note: "Requires an FFmpeg worker." },
-  { id: "step", group: "cad", support: "unsupported", note: "Disabled until a validated BRep/OpenCascade pipeline exists." },
-  { id: "iges", group: "cad", support: "unsupported", note: "Disabled until a validated BRep/OpenCascade pipeline exists." },
+  {
+    id: "step",
+    group: "cad",
+    support: "unsupported",
+    note: "Disabled until a validated BRep/OpenCascade pipeline exists.",
+  },
+  {
+    id: "iges",
+    group: "cad",
+    support: "unsupported",
+    note: "Disabled until a validated BRep/OpenCascade pipeline exists.",
+  },
 ];
 
 function gltfBlob(binary: boolean): Promise<Blob> {
@@ -95,7 +170,9 @@ function exportPly(): Blob {
       vertices.push(`${point.x} ${point.y} ${point.z}`);
     }
     for (let index = 0; index + 2 < position.count; index += 3) {
-      faces.push(`3 ${vertexOffset + index} ${vertexOffset + index + 1} ${vertexOffset + index + 2}`);
+      faces.push(
+        `3 ${vertexOffset + index} ${vertexOffset + index + 1} ${vertexOffset + index + 2}`,
+      );
     }
     vertexOffset += position.count;
     if (geometry !== source) geometry.dispose();

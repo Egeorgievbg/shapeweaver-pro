@@ -1,13 +1,5 @@
-import type {
-  RawKnifeBody,
-  RawKnifeFace,
-} from "@/integrations/boxcraft/types";
-import type {
-  ManifestDieline,
-  ManifestFace,
-  ManifestFold,
-  ManifestMaterial,
-} from "../types";
+import type { RawKnifeBody, RawKnifeFace } from "@/integrations/boxcraft/types";
+import type { ManifestDieline, ManifestFace, ManifestFold, ManifestMaterial } from "../types";
 import {
   asRecord,
   commandsToSvgPath,
@@ -47,10 +39,12 @@ export function compileLayer(
   firstFoldIndex: number,
 ): CompiledLayer {
   const warnings: string[] = [];
-  const rawFaces = (Array.isArray(layer.faces) ? layer.faces : knife.faces ?? []) as RawKnifeFace[];
+  const rawFaces = (
+    Array.isArray(layer.faces) ? layer.faces : (knife.faces ?? [])
+  ) as RawKnifeFace[];
   const svgFaces = Array.isArray(layer.facesForSvg)
     ? (layer.facesForSvg as { name?: string; d?: string }[])
-    : knife.facesForSvg ?? [];
+    : (knife.facesForSvg ?? []);
   const svgByName = new Map(
     svgFaces.map((face) => [String(face.name ?? ""), String(face.d ?? "")]),
   );
@@ -84,7 +78,9 @@ export function compileLayer(
   const folds: ManifestFold[] = [];
   const foldsByName = new Map<string, ManifestFold>();
   let nextFoldIndex = firstFoldIndex;
-  const rawFolds = (Array.isArray(layer.folds) ? layer.folds : knife.folds ?? []) as UnknownRecord[];
+  const rawFolds = (
+    Array.isArray(layer.folds) ? layer.folds : (knife.folds ?? [])
+  ) as UnknownRecord[];
   for (const rawFold of rawFolds) {
     const name = String(rawFold.name ?? "");
     const [parent, child] = resolveFoldFaces(name, faceNames);

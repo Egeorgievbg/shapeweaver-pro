@@ -23,9 +23,7 @@ export function ManifestGeometryResolver(props: Props) {
   }, [props.model.id, props.model.gltf?.url]);
 
   const hasGltf =
-    props.model.geometryStrategy === "gltf" &&
-    Boolean(props.model.gltf?.url) &&
-    !gltfFailed;
+    props.model.geometryStrategy === "gltf" && Boolean(props.model.gltf?.url) && !gltfFailed;
   const hasDielineFaces =
     props.model.panels.length > 0 &&
     props.model.panels.some((panel) => Boolean(panel.svgPath?.trim()));

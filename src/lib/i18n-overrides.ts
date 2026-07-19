@@ -14,7 +14,8 @@ Object.assign(MESSAGES.bg, {
   "export.native3d": "Нативни 3D формати",
   "export.capabilities": "Матрица на форматите",
   "export.currentPose": "3D export-ът съдържа текущата сгъната поза.",
-  "export.previewDieline": "Дилайнът е непотвърден производствен preview, освен ако статусът не е approved.",
+  "export.previewDieline":
+    "Дилайнът е непотвърден производствен preview, освен ако статусът не е approved.",
   "export.native": "Нативен",
   "export.serverConverted": "Сървърно конвертиране",
   "export.serverconverted": "Сървърно конвертиране",
@@ -34,7 +35,8 @@ Object.assign(MESSAGES.en, {
   "export.native3d": "Native 3D formats",
   "export.capabilities": "Format capability matrix",
   "export.currentPose": "The 3D export contains the current folded pose.",
-  "export.previewDieline": "The dieline is an unverified production preview unless its status is approved.",
+  "export.previewDieline":
+    "The dieline is an unverified production preview unless its status is approved.",
   "export.native": "Native",
   "export.serverConverted": "Server converted",
   "export.serverconverted": "Server converted",

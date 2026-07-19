@@ -212,7 +212,9 @@ export function Viewport3D() {
         }}
         onPointerMissed={() => selectPanel(null)}
       >
-        {!scene.transparentBackground && <color attach="background" args={[scene.backgroundColor]} />}
+        {!scene.transparentBackground && (
+          <color attach="background" args={[scene.backgroundColor]} />
+        )}
         <ambientLight intensity={0.45} />
         <directionalLight position={[5, 8, 5]} intensity={scene.keyLightIntensity} castShadow />
         <directionalLight position={[-5, 3, -3]} intensity={scene.fillLightIntensity} />
@@ -285,7 +287,8 @@ export function Viewport3D() {
       )}
 
       <div className="pointer-events-none absolute left-4 top-4 rounded-md bg-black/60 px-2.5 py-1 font-mono text-[10px] uppercase tracking-wider text-white backdrop-blur">
-        Geometry: {runtimeStrategy ?? (model.geometryStrategy === "gltf" ? "GLB" : model.geometryStrategy)}
+        Geometry:{" "}
+        {runtimeStrategy ?? (model.geometryStrategy === "gltf" ? "GLB" : model.geometryStrategy)}
       </div>
     </div>
   );
