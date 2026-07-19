@@ -6,6 +6,13 @@ export const EP = {
 
   products: "/api/v1/visualization/products",
   product: (id: string) => `/api/v1/visualization/products/${encodeURIComponent(id)}`,
+  manifest: (id: string) => `/api/v1/products/${encodeURIComponent(id)}/manifest`,
+  dieline: (id: string) => `/api/v1/products/${encodeURIComponent(id)}/dieline`,
+  animations: (id: string) => `/api/v1/products/${encodeURIComponent(id)}/animations`,
+  materials: (id: string) => `/api/v1/products/${encodeURIComponent(id)}/materials`,
+  assets: (id: string) => `/api/v1/products/${encodeURIComponent(id)}/assets`,
+  versions: (id: string) => `/api/v1/products/${encodeURIComponent(id)}/versions`,
+  validation: (id: string) => `/api/v1/products/${encodeURIComponent(id)}/validation`,
   payloads: (id: string) => `/api/v1/visualization/products/${encodeURIComponent(id)}/payloads`,
   payload: (id: string, kind: "details" | "knife" | "preview") =>
     `/api/v1/visualization/products/${encodeURIComponent(id)}/payloads/${kind}`,
