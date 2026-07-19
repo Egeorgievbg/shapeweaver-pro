@@ -19,54 +19,210 @@ jobs:
         run: |
           bun add --no-save playwright
           bunx playwright install --with-deps chromium
-      - name: Start production server
+      - name: Start mock upstream and production server
         shell: bash
         run: |
+          cat > /tmp/mock-upstream.ts <<'TS'
+          const json = (payload: unknown, status = 200) =>
+            new Response(JSON.stringify(payload), {
+              status,
+              headers: { "content-type": "application/json; charset=utf-8" },
+            });
+
+          Bun.serve({
+            port: 4174,
+            hostname: "0.0.0.0",
+            fetch(request) {
+              const url = new URL(request.url);
+              if (
+                url.pathname === "/api/health" ||
+                url.pathname === "/api/v1/visualization/health" ||
+                url.pathname === "/api/configurator/health"
+              ) {
+                return json({ ok: true, service: url.pathname });
+              }
+              if (url.pathname === "/api/v1/visualization/products") {
+                return json({
+                  ok: true,
+                  schema: "visualization-products-v1",
+                  pagination: {
+                    total: 2,
+                    limit: 50,
+                    offset: 0,
+                    count: 2,
+                    has_more: false,
+                    next_offset: null,
+                  },
+                  filters: {},
+                  items: [
+                    {
+                      source_id: "mailer-001",
+                      id: "mailer-001",
+                      name: "Mailer Box",
+                      family: "Mailer",
+                      category: "E-commerce",
+                      material: "Kraft",
+                      geometry_quality: "knife-rig",
+                      has_details: true,
+                      has_knife: true,
+                      has_preview: true,
+                    },
+                    {
+                      source_id: "rigid-001",
+                      id: "rigid-001",
+                      name: "Rigid Gift Box",
+                      family: "Rigid",
+                      category: "Gift",
+                      material: "Greyboard",
+                      geometry_quality: "gltf",
+                      has_details: true,
+                      has_knife: true,
+                      has_preview: true,
+                    },
+                  ],
+                });
+              }
+              if (url.pathname === "/api/v1/visualization/relations") {
+                return json({
+                  schema: "relations-v1",
+                  generated_at: new Date().toISOString(),
+                  families: [
+                    { id: "mailer", kind: "family", name: "Mailer", product_count: 1 },
+                    { id: "rigid", kind: "family", name: "Rigid", product_count: 1 },
+                  ],
+                  categories: [
+                    { id: "ecommerce", kind: "category", name: "E-commerce", product_count: 1 },
+                    { id: "gift", kind: "category", name: "Gift", product_count: 1 },
+                  ],
+                  materials: [
+                    { id: "kraft", kind: "material", name: "Kraft", product_count: 1 },
+                    { id: "greyboard", kind: "material", name: "Greyboard", product_count: 1 },
+                  ],
+                });
+              }
+              if (url.pathname === "/api/admin/capabilities") {
+                const resources = [
+                  "products",
+                  "taxonomy",
+                  "materials",
+                  "translations",
+                  "content",
+                  "geometry",
+                  "dielines",
+                  "assets",
+                  "quotes",
+                  "exports",
+                  "users",
+                  "roles",
+                  "integrations",
+                  "settings",
+                  "audit",
+                ];
+                return json({
+                  ok: true,
+                  authenticated: true,
+                  role: "administrator",
+                  generated_at: new Date().toISOString(),
+                  capabilities: resources.map((resource) => ({
+                    resource,
+                    endpoint: `/api/admin/${resource}`,
+                    methods: resource === "audit" ? ["GET"] : ["GET", "POST", "PATCH", "DELETE"],
+                    enabled: true,
+                    permission: `admin:${resource}`,
+                  })),
+                });
+              }
+              if (url.pathname.startsWith("/api/admin/")) {
+                return json({ ok: true, items: [], resource: url.pathname });
+              }
+              return json({ ok: false, error: "not_found", path: url.pathname }, 404);
+            },
+          });
+          TS
+          bun /tmp/mock-upstream.ts > mock-upstream.log 2>&1 &
+
+          BOXCRAFT_UPSTREAM_URL=http://127.0.0.1:4174 \
+          GPTSBOXES_ADMIN_ACCESS_KEY=visual-admin-key \
+          GPTSBOXES_ADMIN_SESSION_SECRET=visual-session-secret-with-more-than-32-characters \
+          GPTSBOXES_ADMIN_UPSTREAM_URL=http://127.0.0.1:4174 \
+          GPTSBOXES_ADMIN_UPSTREAM_TOKEN=visual-upstream-token \
           PORT=4173 HOST=0.0.0.0 NITRO_PORT=4173 NITRO_HOST=0.0.0.0 \
             bun .output/server/index.mjs > admin-visual-server.log 2>&1 &
+
           for attempt in {1..45}; do
-            if curl --fail --silent http://127.0.0.1:4173/ > /dev/null; then
+            if curl --fail --silent http://127.0.0.1:4174/api/health > /dev/null && \
+               curl --fail --silent http://127.0.0.1:4173/ > /dev/null; then
               exit 0
             fi
             sleep 1
           done
+          cat mock-upstream.log
           cat admin-visual-server.log
           exit 1
-      - name: Validate Bulgarian English and admin layouts
+      - name: Validate Bulgarian English and authenticated admin layouts
         run: |
           cat > /tmp/admin-visual-smoke.ts <<'TS'
-          import { chromium } from "playwright";
+          import { chromium, type Page } from "playwright";
+
+          const signIn = async (page: Page, locale: "bg" | "en") => {
+            await page.locator('input[type="password"]').fill("visual-admin-key");
+            await page.getByRole("button", { name: locale === "bg" ? "Влез" : "Sign in" }).click();
+            await page.getByRole("heading", {
+              name: locale === "bg" ? "Административен център" : "Administration Center",
+            }).waitFor({ timeout: 15_000 });
+          };
 
           const browser = await chromium.launch({ headless: true });
           const desktop = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
           const page = await desktop.newPage();
 
-          await page.goto("http://127.0.0.1:4173/", { waitUntil: "networkidle" });
-          await page.waitForTimeout(1200);
+          await page.goto("http://127.0.0.1:4173/", { waitUntil: "domcontentloaded" });
+          await page.waitForTimeout(1500);
           if ((await page.locator("html").getAttribute("lang")) !== "bg") {
             throw new Error("Bulgarian is not the default locale");
           }
           await page.screenshot({ path: "landing-bg-desktop.png", fullPage: true });
 
           await page.locator("header select").selectOption("en");
-          await page.waitForTimeout(600);
+          await page.getByRole("link", { name: "Library" }).waitFor();
           if ((await page.locator("html").getAttribute("lang")) !== "en") {
             throw new Error("English locale switch failed");
           }
           await page.screenshot({ path: "landing-en-desktop.png", fullPage: true });
 
-          await page.goto("http://127.0.0.1:4173/admin/data", { waitUntil: "networkidle" });
+          await page.goto("http://127.0.0.1:4173/admin/data", { waitUntil: "domcontentloaded" });
+          await page.getByRole("heading", { name: "Administration sign in" }).waitFor();
+          await page.screenshot({ path: "admin-login-en-desktop.png", fullPage: true });
+          await signIn(page, "en");
           await page.waitForTimeout(1200);
           await page.screenshot({ path: "admin-en-desktop.png", fullPage: true });
 
           await page.locator("header select").selectOption("bg");
-          await page.waitForTimeout(600);
+          await page.getByRole("heading", { name: "Административен център" }).waitFor();
+          if ((await page.locator("html").getAttribute("lang")) !== "bg") {
+            throw new Error("Bulgarian locale restore failed");
+          }
+          const bgText = await page.locator("body").innerText();
+          for (const forbidden of ["Backend capabilities", "same-origin proxy", "Technical diagnostics"]) {
+            if (bgText.includes(forbidden)) throw new Error(`Mixed Bulgarian interface: ${forbidden}`);
+          }
+          if (!bgText.includes("Възможности на сървъра")) {
+            throw new Error("Bulgarian server capabilities label missing");
+          }
+          if (!bgText.includes("Онлайн")) {
+            throw new Error("Mocked API health was not reported online");
+          }
           await page.screenshot({ path: "admin-bg-desktop.png", fullPage: true });
           await desktop.close();
 
-          const mobile = await browser.newContext({ viewport: { width: 412, height: 915 }, deviceScaleFactor: 1 });
+          const mobile = await browser.newContext({
+            viewport: { width: 412, height: 915 },
+            deviceScaleFactor: 1,
+          });
           const mobilePage = await mobile.newPage();
-          await mobilePage.goto("http://127.0.0.1:4173/admin/data", { waitUntil: "networkidle" });
+          await mobilePage.goto("http://127.0.0.1:4173/admin/data", { waitUntil: "domcontentloaded" });
+          await mobilePage.getByRole("heading", { name: "Вход в администрацията" }).waitFor();
+          await signIn(mobilePage, "bg");
           await mobilePage.waitForTimeout(1200);
           await mobilePage.screenshot({ path: "admin-bg-mobile.png", fullPage: true });
           await mobile.close();
@@ -81,9 +237,11 @@ jobs:
           path: |
             landing-bg-desktop.png
             landing-en-desktop.png
+            admin-login-en-desktop.png
             admin-en-desktop.png
             admin-bg-desktop.png
             admin-bg-mobile.png
             admin-visual-server.log
+            mock-upstream.log
           if-no-files-found: warn
           retention-days: 3
