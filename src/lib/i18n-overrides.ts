@@ -1,6 +1,6 @@
 import { MESSAGES } from "@/lib/i18n";
 
-Object.assign(MESSAGES.bg, {
+const BG_OVERRIDES: Record<string, string> = {
   "admin.capabilities": "Възможности на сървъра",
   "admin.endpoint": "Крайна точка",
   "admin.unsupported": "Сървърът не предоставя тази операция.",
@@ -24,9 +24,9 @@ Object.assign(MESSAGES.bg, {
   "export.success": "Файлът е експортиран.",
   "export.noDieline": "Няма наличен дилайн.",
   "export.viewportNotReady": "3D изгледът не е готов.",
-});
+};
 
-Object.assign(MESSAGES.en, {
+const EN_OVERRIDES: Record<string, string> = {
   "admin.technicalDiagnostics": "Technical diagnostics",
   "export.title": "Export",
   "export.description": "Export the current configuration, dieline, or real 3D pose.",
@@ -45,4 +45,11 @@ Object.assign(MESSAGES.en, {
   "export.success": "The file was exported.",
   "export.noDieline": "No dieline is available.",
   "export.viewportNotReady": "The 3D viewport is not ready.",
-});
+};
+
+export function ensureI18nOverrides() {
+  Object.assign(MESSAGES.bg, BG_OVERRIDES);
+  Object.assign(MESSAGES.en, EN_OVERRIDES);
+}
+
+ensureI18nOverrides();
