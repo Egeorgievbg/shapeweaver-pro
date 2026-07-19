@@ -184,7 +184,7 @@ jobs:
           await page.screenshot({ path: "landing-bg-desktop.png", fullPage: true });
 
           await page.locator("header select").selectOption("en");
-          await page.getByRole("link", { name: "Library" }).waitFor();
+          await page.locator("header").getByRole("link", { name: "Library", exact: true }).waitFor();
           if ((await page.locator("html").getAttribute("lang")) !== "en") {
             throw new Error("English locale switch failed");
           }
