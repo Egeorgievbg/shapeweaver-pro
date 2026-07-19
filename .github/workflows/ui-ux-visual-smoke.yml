@@ -17,11 +17,17 @@ jobs:
       - run: bun run build
       - name: Install Chromium
         run: bunx playwright install --with-deps chromium
-      - name: Start preview
+      - name: Start production server
         shell: bash
         run: |
-          bun run preview --host 0.0.0.0 --port 4173 > /tmp/shapeweaver-preview.log 2>&1 &
-          for attempt in {1..30}; do
+          find .output -maxdepth 3 -type f | sort | head -80
+          if [ -f .output/server/index.mjs ]; then
+            PORT=4173 HOST=0.0.0.0 NITRO_PORT=4173 NITRO_HOST=0.0.0.0 \
+              bun .output/server/index.mjs > /tmp/shapeweaver-preview.log 2>&1 &
+          else
+            bun run preview --host 0.0.0.0 --port 4173 > /tmp/shapeweaver-preview.log 2>&1 &
+          fi
+          for attempt in {1..45}; do
             if curl --fail --silent http://127.0.0.1:4173/library > /dev/null; then
               exit 0
             fi
@@ -32,7 +38,7 @@ jobs:
       - name: Capture desktop and mobile library
         run: |
           bunx playwright screenshot \
-            --device="Desktop Chrome HiDPI" \
+            --device="Desktop Chrome" \
             --wait-for-timeout=8000 \
             --full-page \
             http://127.0.0.1:4173/library \
@@ -44,10 +50,13 @@ jobs:
             http://127.0.0.1:4173/library \
             ui-ux-library-mobile.png
       - name: Upload visual evidence
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: ui-ux-visual-smoke
           path: |
             ui-ux-library-desktop.png
             ui-ux-library-mobile.png
+            /tmp/shapeweaver-preview.log
+          if-no-files-found: warn
           retention-days: 3
