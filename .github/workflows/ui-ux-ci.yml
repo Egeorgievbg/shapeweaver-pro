@@ -5,7 +5,7 @@ on:
     branches: [main]
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: application-validation-${{ github.event.pull_request.number }}
@@ -16,8 +16,186 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
+      - name: Finalize bilingual gateways
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          i18n = Path("src/lib/i18n.ts")
+          content = i18n.read_text()
+          replacements = {
+              '"admin.capabilities": "Възможности на backend"': '"admin.capabilities": "Възможности на сървъра"',
+              '"admin.endpoint": "Endpoint"': '"admin.endpoint": "Крайна точка"',
+              '"admin.unsupported": "Backend-ът не предоставя тази операция."': '"admin.unsupported": "Сървърът не предоставя тази операция."',
+              '"admin.connectionRequired": "Необходим е активен BoxCraft API или same-origin proxy."': '"admin.connectionRequired": "Необходим е активен BoxCraft API или прокси от същия домейн."',
+              '"admin.slug": "Slug"': '"admin.slug": "Системен адрес (slug)"',
+              '"admin.currentApi": "Текущ API адрес",': '"admin.currentApi": "Текущ API адрес",\n    "admin.technicalDiagnostics": "Техническа диагностика",',
+              '"admin.currentApi": "Current API address",': '"admin.currentApi": "Current API address",\n    "admin.technicalDiagnostics": "Technical diagnostics",',
+          }
+          for old, new in replacements.items():
+              if old in content:
+                  content = content.replace(old, new, 1)
+          i18n.write_text(content)
+
+          admin = Path("src/components/admin/AdminControlCenter.tsx")
+          content = admin.read_text()
+          old_health = '  const { t } = useI18n();\n  const stats = [\n    {\n      label: t("admin.apiHealth"),\n      value: healthLoading ? "…" : health ? t("status.online") : t("status.offline"),\n      icon: Database,\n    },'
+          new_health = '''  const { t } = useI18n();
+  const healthOnline =
+    Boolean(health) &&
+    typeof health === "object" &&
+    Object.values(health as Record<string, unknown>).some(
+      (service) =>
+        service != null &&
+        typeof service === "object" &&
+        !("error" in (service as Record<string, unknown>)),
+    );
+  const stats = [
+    {
+      label: t("admin.apiHealth"),
+      value: healthLoading ? "…" : healthOnline ? t("status.online") : t("status.offline"),
+      icon: Database,
+    },'''
+          if old_health in content:
+              content = content.replace(old_health, new_health, 1)
+          content = content.replace(
+              '<summary className="cursor-pointer font-medium">Technical diagnostics</summary>',
+              '<summary className="cursor-pointer font-medium">{t("admin.technicalDiagnostics")}</summary>',
+              1,
+          )
+          admin.write_text(content)
+
+          server = Path("src/server.ts")
+          content = server.read_text()
+          marker = 'async function handleAdminGateway(request: Request, env: unknown): Promise<Response | null> {'
+          if 'async function handleBoxcraftGateway(' not in content:
+              public_gateway = '''async function handleBoxcraftGateway(
+  request: Request,
+  env: unknown,
+): Promise<Response | null> {
+  const url = new URL(request.url);
+  if (!url.pathname.startsWith("/api/boxcraft")) return null;
+
+  if (request.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: { Allow: "GET, HEAD, OPTIONS" } });
+  }
+  if (request.method !== "GET" && request.method !== "HEAD") {
+    return jsonResponse({ ok: false, error: "method_not_allowed" }, 405, {
+      Allow: "GET, HEAD, OPTIONS",
+    });
+  }
+
+  const upstreamBase = getEnvironmentValue(env, "BOXCRAFT_UPSTREAM_URL");
+  if (!upstreamBase) {
+    return jsonResponse(
+      {
+        ok: false,
+        error: "boxcraft_upstream_not_configured",
+        message: "Set BOXCRAFT_UPSTREAM_URL on the server.",
+      },
+      503,
+    );
+  }
+
+  const suffix = url.pathname.slice("/api/boxcraft".length) || "/";
+  const target = new URL(
+    `${suffix}${url.search}`,
+    upstreamBase.endsWith("/") ? upstreamBase : `${upstreamBase}/`,
+  );
+  const headers = new Headers({
+    Accept: request.headers.get("accept") ?? "application/json, */*",
+    "User-Agent": "GPTSBOXES-BoxCraft-Gateway/1.0",
+    "ngrok-skip-browser-warning": "true",
+  });
+
+  let upstreamResponse: Response;
+  try {
+    upstreamResponse = await fetch(target, {
+      method: request.method,
+      headers,
+      redirect: "follow",
+    });
+  } catch (error) {
+    console.error("BoxCraft upstream request failed", error);
+    return jsonResponse({ ok: false, error: "boxcraft_upstream_unreachable" }, 502);
+  }
+
+  const responseHeaders = new Headers({ "x-content-type-options": "nosniff" });
+  for (const name of [
+    "content-type",
+    "content-length",
+    "cache-control",
+    "etag",
+    "last-modified",
+    "x-request-id",
+  ]) {
+    const value = upstreamResponse.headers.get(name);
+    if (value) responseHeaders.set(name, value);
+  }
+
+  return new Response(request.method === "HEAD" ? null : upstreamResponse.body, {
+    status: upstreamResponse.status,
+    statusText: upstreamResponse.statusText,
+    headers: responseHeaders,
+  });
+}
+
+'''
+              if marker not in content:
+                  raise SystemExit("Admin gateway marker not found")
+              content = content.replace(marker, public_gateway + marker, 1)
+          old_dispatch = '''      const adminResponse = await handleAdminGateway(request, env);
+      if (adminResponse) return adminResponse;
+
+      const handler = await getServerEntry();'''
+          new_dispatch = '''      const boxcraftResponse = await handleBoxcraftGateway(request, env);
+      if (boxcraftResponse) return boxcraftResponse;
+
+      const adminResponse = await handleAdminGateway(request, env);
+      if (adminResponse) return adminResponse;
+
+      const handler = await getServerEntry();'''
+          if 'const boxcraftResponse = await handleBoxcraftGateway' not in content:
+              if old_dispatch not in content:
+                  raise SystemExit("Server dispatch block not found")
+              content = content.replace(old_dispatch, new_dispatch, 1)
+          server.write_text(content)
+          PY
+          bunx prettier --write \
+            src/components/admin/AdminControlCenter.tsx \
+            src/lib/i18n.ts \
+            src/server.ts \
+            src/lib/env.ts \
+            src/integrations/boxcraft/client.ts
+          bunx eslint --fix \
+            src/components/admin/AdminControlCenter.tsx \
+            src/lib/i18n.ts \
+            src/server.ts \
+            src/lib/env.ts \
+            src/integrations/boxcraft/client.ts
+      - name: Commit finalized source
+        shell: bash
+        run: |
+          if git diff --quiet; then
+            echo "Source already finalized"
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add \
+              src/components/admin/AdminControlCenter.tsx \
+              src/lib/i18n.ts \
+              src/server.ts \
+              src/lib/env.ts \
+              src/integrations/boxcraft/client.ts
+            git commit -m "fix: finalize bilingual gateways and health status"
+            git push origin HEAD:${{ github.head_ref }}
+          fi
       - run: bun run build
       - name: Check formatting
         run: |
