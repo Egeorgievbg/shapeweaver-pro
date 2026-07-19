@@ -1,0 +1,89 @@
+name: BG EN admin visual smoke
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  visual-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bun run build
+      - name: Install Playwright Chromium
+        run: |
+          bun add --no-save playwright
+          bunx playwright install --with-deps chromium
+      - name: Start production server
+        shell: bash
+        run: |
+          PORT=4173 HOST=0.0.0.0 NITRO_PORT=4173 NITRO_HOST=0.0.0.0 \
+            bun .output/server/index.mjs > admin-visual-server.log 2>&1 &
+          for attempt in {1..45}; do
+            if curl --fail --silent http://127.0.0.1:4173/ > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat admin-visual-server.log
+          exit 1
+      - name: Validate Bulgarian English and admin layouts
+        run: |
+          cat > /tmp/admin-visual-smoke.ts <<'TS'
+          import { chromium } from "playwright";
+
+          const browser = await chromium.launch({ headless: true });
+          const desktop = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+          const page = await desktop.newPage();
+
+          await page.goto("http://127.0.0.1:4173/", { waitUntil: "networkidle" });
+          await page.waitForTimeout(1200);
+          if ((await page.locator("html").getAttribute("lang")) !== "bg") {
+            throw new Error("Bulgarian is not the default locale");
+          }
+          await page.screenshot({ path: "landing-bg-desktop.png", fullPage: true });
+
+          await page.locator("header select").selectOption("en");
+          await page.waitForTimeout(600);
+          if ((await page.locator("html").getAttribute("lang")) !== "en") {
+            throw new Error("English locale switch failed");
+          }
+          await page.screenshot({ path: "landing-en-desktop.png", fullPage: true });
+
+          await page.goto("http://127.0.0.1:4173/admin/data", { waitUntil: "networkidle" });
+          await page.waitForTimeout(1200);
+          await page.screenshot({ path: "admin-en-desktop.png", fullPage: true });
+
+          await page.locator("header select").selectOption("bg");
+          await page.waitForTimeout(600);
+          await page.screenshot({ path: "admin-bg-desktop.png", fullPage: true });
+          await desktop.close();
+
+          const mobile = await browser.newContext({ viewport: { width: 412, height: 915 }, deviceScaleFactor: 1 });
+          const mobilePage = await mobile.newPage();
+          await mobilePage.goto("http://127.0.0.1:4173/admin/data", { waitUntil: "networkidle" });
+          await mobilePage.waitForTimeout(1200);
+          await mobilePage.screenshot({ path: "admin-bg-mobile.png", fullPage: true });
+          await mobile.close();
+          await browser.close();
+          TS
+          bun /tmp/admin-visual-smoke.ts
+      - name: Upload browser evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bg-en-admin-visual-smoke
+          path: |
+            landing-bg-desktop.png
+            landing-en-desktop.png
+            admin-en-desktop.png
+            admin-bg-desktop.png
+            admin-bg-mobile.png
+            admin-visual-server.log
+          if-no-files-found: warn
+          retention-days: 3
