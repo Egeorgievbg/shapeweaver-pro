@@ -3,17 +3,21 @@ name: Real data formatted source preview
 on:
   push:
     branches: [feature/real-data-manifest-export-pipeline]
-  pull_request:
-    branches: [feature/bg-en-admin-control-center]
 
 permissions:
-  contents: read
+  contents: write
+
+concurrency:
+  group: real-data-format-once
+  cancel-in-progress: true
 
 jobs:
   format-preview:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: feature/real-data-manifest-export-pipeline
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
       - name: Format changed public source files
@@ -35,24 +39,10 @@ jobs:
             src/integrations/boxcraft/endpoints.ts \
             src/integrations/boxcraft/index.ts \
             src/lib/i18n-overrides.ts
-      - uses: actions/upload-artifact@v4
-        with:
-          name: formatted-real-data-public-sources
-          path: |
-            src/components/export/ExportDialog.tsx
-            src/components/viewer/Viewport3D.tsx
-            src/features/configurator/export/nativeExporters.ts
-            src/features/configurator/export/viewportRegistry.ts
-            src/features/configurator/geometry/AnimationEvaluator.ts
-            src/features/configurator/geometry/KnifeRigBuilder.tsx
-            src/features/configurator/geometry/ManifestGeometryResolver.tsx
-            src/features/configurator/manifest/adapter.ts
-            src/features/configurator/manifest/types.ts
-            src/features/configurator/manifest/legacyCompiler.ts
-            src/features/configurator/manifest/legacy/animationTools.ts
-            src/features/configurator/manifest/legacy/layerTools.ts
-            src/features/configurator/manifest/legacy/pathTools.ts
-            src/integrations/boxcraft/endpoints.ts
-            src/integrations/boxcraft/index.ts
-            src/lib/i18n-overrides.ts
-          retention-days: 2
+      - name: Commit formatter output
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src
+          git diff --cached --quiet || git commit -m "style: format real data pipeline"
+          git push origin HEAD:feature/real-data-manifest-export-pipeline
