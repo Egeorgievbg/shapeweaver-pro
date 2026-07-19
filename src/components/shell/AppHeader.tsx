@@ -1,11 +1,12 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { Boxes, Languages, Moon, Search, Sun } from "lucide-react";
 import { useTheme } from "@/hooks/use-theme";
-import "@/lib/i18n-overrides";
+import { ensureI18nOverrides } from "@/lib/i18n-overrides";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 
 export function AppHeader() {
+  ensureI18nOverrides();
   const { theme, toggle } = useTheme();
   const { t, locale, setLocale } = useI18n();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
