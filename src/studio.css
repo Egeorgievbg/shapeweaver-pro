@@ -8,8 +8,13 @@
   box-shadow: 0 1px 0 color-mix(in oklch, var(--color-panel-border) 70%, transparent);
 }
 
-.studio-icon-button {
+/* Keep default display behaviour at zero specificity so Tailwind responsive
+   utilities such as hidden, sm:inline-flex and md:flex always take priority. */
+:where(.studio-icon-button) {
   display: inline-flex;
+}
+
+.studio-icon-button {
   min-height: 2rem;
   min-width: 2rem;
   align-items: center;
@@ -31,9 +36,12 @@
   transform: translateY(1px);
 }
 
+:where(.studio-primary-button, .studio-secondary-button) {
+  display: inline-flex;
+}
+
 .studio-primary-button,
 .studio-secondary-button {
-  display: inline-flex;
   min-height: 2.25rem;
   align-items: center;
   gap: 0.5rem;
