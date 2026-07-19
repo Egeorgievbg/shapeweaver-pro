@@ -1,8 +1,9 @@
-import { Canvas } from "@react-three/fiber";
+import { Canvas, useThree } from "@react-three/fiber";
 import { OrbitControls, ContactShadows, Environment, Grid, Bounds, Html } from "@react-three/drei";
 import { Suspense, useEffect, useRef, useState } from "react";
+import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import * as THREE from "three";
-import { useConfiguratorStore } from "@/stores/configurator";
+import { useConfiguratorStore, type CameraPreset } from "@/stores/configurator";
 import { GeometryResolver } from "@/features/configurator/geometry/GeometryResolver";
 import { detectWebGL } from "@/lib/webgl";
 import { AlertTriangle, Loader2 } from "lucide-react";
@@ -13,33 +14,36 @@ interface ArtworkTextureState {
 }
 
 function useArtworkTexture(): ArtworkTextureState {
-  const layers = useConfiguratorStore((s) => s.artworkLayers);
-  const model = useConfiguratorStore((s) => s.productModel);
+  const layers = useConfiguratorStore((state) => state.artworkLayers);
+  const model = useConfiguratorStore((state) => state.productModel);
   const [state, setState] = useState<ArtworkTextureState>({ texture: null, loading: false });
 
   useEffect(() => {
     if (!model?.dieline) {
-      setState({ texture: null, loading: false });
+      setState((current) => {
+        current.texture?.dispose();
+        return { texture: null, loading: false };
+      });
       return;
     }
 
     let cancelled = false;
-    const dielineW = Math.max(Number(model.dieline.totalX) || 1, 1);
-    const dielineH = Math.max(Number(model.dieline.totalY) || 1, 1);
+    const dielineWidth = Math.max(Number(model.dieline.totalX) || 1, 1);
+    const dielineHeight = Math.max(Number(model.dieline.totalY) || 1, 1);
     const canvas = document.createElement("canvas");
-    const scale = Math.min(2048 / Math.max(dielineW, dielineH), 4);
-    canvas.width = Math.max(1, Math.round(dielineW * scale));
-    canvas.height = Math.max(1, Math.round(dielineH * scale));
-    const ctx = canvas.getContext("2d");
+    const scale = Math.min(2048 / Math.max(dielineWidth, dielineHeight), 4);
+    canvas.width = Math.max(1, Math.round(dielineWidth * scale));
+    canvas.height = Math.max(1, Math.round(dielineHeight * scale));
+    const context = canvas.getContext("2d");
 
-    if (!ctx) {
+    if (!context) {
       setState({ texture: null, loading: false });
       return;
     }
 
     setState((current) => ({ ...current, loading: true }));
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, canvas.width, canvas.height);
 
     const loads = layers
       .filter((layer) => layer.visible)
@@ -54,18 +58,18 @@ function useArtworkTexture(): ArtworkTextureState {
                 layer.panelId !== "all"
                   ? model.panels.find((candidate) => candidate.id === layer.panelId)
                   : undefined;
-              const bbox = panel?.bbox ?? { x: 0, y: 0, w: dielineW, h: dielineH };
+              const bbox = panel?.bbox ?? { x: 0, y: 0, w: dielineWidth, h: dielineHeight };
               const centerX = (bbox.x + bbox.w / 2 + layer.offset.x) * scale;
               const centerY = (bbox.y + bbox.h / 2 + layer.offset.y) * scale;
               const drawWidth = image.width * layer.scale * scale * 0.3;
               const drawHeight = image.height * layer.scale * scale * 0.3;
 
-              ctx.save();
-              ctx.globalAlpha = layer.opacity;
-              ctx.translate(centerX, centerY);
-              ctx.rotate(THREE.MathUtils.degToRad(layer.rotation));
-              ctx.drawImage(image, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
-              ctx.restore();
+              context.save();
+              context.globalAlpha = layer.opacity;
+              context.translate(centerX, centerY);
+              context.rotate(THREE.MathUtils.degToRad(layer.rotation));
+              context.drawImage(image, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
+              context.restore();
               resolve();
             };
             image.onerror = () => resolve();
@@ -91,17 +95,58 @@ function useArtworkTexture(): ArtworkTextureState {
   }, [layers, model]);
 
   useEffect(() => () => state.texture?.dispose(), [state.texture]);
-
   return state;
+}
+
+const CAMERA_POSITIONS: Record<CameraPreset, [number, number, number]> = {
+  perspective: [3.2, 2.6, 4.2],
+  isometric: [3.2, 2.6, 4.2],
+  front: [0, 0.25, 5],
+  back: [0, 0.25, -5],
+  left: [-5, 0.25, 0],
+  right: [5, 0.25, 0],
+  top: [0.01, 5.4, 0.01],
+  bottom: [0.01, -5.4, 0.01],
+};
+
+function CameraRig({ preset }: { preset: CameraPreset }) {
+  const controls = useRef<OrbitControlsImpl>(null);
+  const { camera, invalidate } = useThree();
+
+  useEffect(() => {
+    camera.position.set(...CAMERA_POSITIONS[preset]);
+    camera.up.set(0, 1, 0);
+    camera.lookAt(0, 0, 0);
+    controls.current?.target.set(0, 0, 0);
+    controls.current?.update();
+    invalidate();
+  }, [camera, invalidate, preset]);
+
+  return (
+    <OrbitControls
+      ref={controls}
+      makeDefault
+      enablePan
+      enableRotate
+      enableZoom
+      enableDamping
+      dampingFactor={0.08}
+      minDistance={1.3}
+      maxDistance={12}
+      maxPolarAngle={Math.PI * 0.98}
+      onChange={invalidate}
+    />
+  );
 }
 
 export function Viewport3D() {
   const [webglStatus] = useState(() => detectWebGL());
-  const model = useConfiguratorStore((s) => s.productModel);
-  const material = useConfiguratorStore((s) => s.material);
-  const scene = useConfiguratorStore((s) => s.scene);
-  const selectedPanelId = useConfiguratorStore((s) => s.selectedPanelId);
-  const selectPanel = useConfiguratorStore((s) => s.selectPanel);
+  const model = useConfiguratorStore((state) => state.productModel);
+  const material = useConfiguratorStore((state) => state.material);
+  const scene = useConfiguratorStore((state) => state.scene);
+  const cameraPreset = useConfiguratorStore((state) => state.cameraPreset);
+  const selectedPanelId = useConfiguratorStore((state) => state.selectedPanelId);
+  const selectPanel = useConfiguratorStore((state) => state.selectPanel);
   const artwork = useArtworkTexture();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const backgroundColor = scene.transparentBackground ? undefined : scene.backgroundColor;
@@ -133,13 +178,15 @@ export function Viewport3D() {
       <Canvas
         ref={canvasRef}
         shadows
+        frameloop="demand"
         gl={{ antialias: true, preserveDrawingBuffer: true, alpha: scene.transparentBackground }}
         dpr={[1, 2]}
-        camera={{ position: [3.2, 2.6, 4.2], fov: 38, near: 0.01, far: 100 }}
+        camera={{ position: CAMERA_POSITIONS.perspective, fov: 38, near: 0.01, far: 100 }}
         onCreated={({ gl }) => {
           gl.toneMapping = THREE.ACESFilmicToneMapping;
           gl.toneMappingExposure = 1.05;
           gl.outputColorSpace = THREE.SRGBColorSpace;
+          gl.shadowMap.type = THREE.PCFSoftShadowMap;
         }}
         onPointerMissed={() => selectPanel(null)}
       >
@@ -164,7 +211,7 @@ export function Viewport3D() {
         )}
 
         {scene.showGrid && (
-          <Grid args={[20, 20]} cellColor="#c0c0c0" sectionColor="#888888" fadeDistance={20} />
+          <Grid args={[20, 20]} position={[0, -1.15, 0]} cellColor="#c0c0c0" sectionColor="#888888" fadeDistance={20} />
         )}
 
         <Suspense
@@ -193,17 +240,7 @@ export function Viewport3D() {
           <ContactShadows position={[0, -1.15, 0]} opacity={0.35} blur={2.4} scale={8} far={4} />
         )}
 
-        <OrbitControls
-          makeDefault
-          enablePan
-          enableRotate
-          enableZoom
-          enableDamping
-          dampingFactor={0.08}
-          minDistance={1.3}
-          maxDistance={12}
-          maxPolarAngle={Math.PI * 0.98}
-        />
+        <CameraRig preset={cameraPreset} />
       </Canvas>
 
       {artwork.loading && (
