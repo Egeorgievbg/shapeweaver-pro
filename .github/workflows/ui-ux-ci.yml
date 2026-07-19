@@ -15,4 +15,20 @@ jobs:
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
       - run: bun run build
-      - run: bun run lint
+      - name: Run lint
+        id: lint
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -o pipefail
+          bun run lint 2>&1 | tee lint.log
+      - name: Upload lint report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-ux-lint-report
+          path: lint.log
+          retention-days: 2
+      - name: Enforce lint result
+        if: steps.lint.outcome == 'failure'
+        run: exit 1
