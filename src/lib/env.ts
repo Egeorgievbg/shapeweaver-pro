@@ -13,8 +13,7 @@ export const BOXCRAFT_API_BASE_URL =
  * Browser-facing administration API base. Empty means same-origin `/api/admin`.
  * Never place an upstream administration token in a VITE_* variable.
  */
-export const ADMIN_API_BASE_URL = (
-  import.meta.env.VITE_ADMIN_API_BASE_URL as string | undefined
-)?.trim() ?? "";
+export const ADMIN_API_BASE_URL =
+  (import.meta.env.VITE_ADMIN_API_BASE_URL as string | undefined)?.trim() ?? "";
 
 export const IS_BROWSER = typeof window !== "undefined";

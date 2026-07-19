@@ -32,7 +32,9 @@ export function AdminAuthGate() {
     onSuccess: async () => {
       setAccessKey("");
       await queryClient.invalidateQueries({ queryKey: ["admin"] });
-      toast.success(locale === "bg" ? "Успешен административен вход" : "Administrator sign-in successful");
+      toast.success(
+        locale === "bg" ? "Успешен административен вход" : "Administrator sign-in successful",
+      );
     },
     onError: (error) => {
       const status = error instanceof AdminApiError ? error.status : undefined;
@@ -72,8 +74,7 @@ export function AdminAuthGate() {
     );
   }
 
-  const gatewayUnavailable =
-    session.error instanceof AdminApiError && session.error.status === 503;
+  const gatewayUnavailable = session.error instanceof AdminApiError && session.error.status === 503;
 
   if (gatewayUnavailable) {
     return <AdminControlCenter />;

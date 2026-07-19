@@ -82,7 +82,9 @@ async function hmacHex(secret: string, value: string) {
     ["sign"],
   );
   const signature = await crypto.subtle.sign("HMAC", key, encoder.encode(value));
-  return Array.from(new Uint8Array(signature), (byte) => byte.toString(16).padStart(2, "0")).join("");
+  return Array.from(new Uint8Array(signature), (byte) => byte.toString(16).padStart(2, "0")).join(
+    "",
+  );
 }
 
 async function createSessionToken(secret: string) {
@@ -155,8 +157,7 @@ async function handleAdminSession(request: Request, env: unknown) {
       {
         ok: false,
         error: "admin_gateway_not_configured",
-        message:
-          "Set GPTSBOXES_ADMIN_ACCESS_KEY and GPTSBOXES_ADMIN_SESSION_SECRET on the server.",
+        message: "Set GPTSBOXES_ADMIN_ACCESS_KEY and GPTSBOXES_ADMIN_SESSION_SECRET on the server.",
       },
       503,
     );
@@ -191,11 +192,9 @@ async function handleAdminSession(request: Request, env: unknown) {
   }
 
   if (request.method === "DELETE") {
-    return jsonResponse(
-      { ok: true, authenticated: false },
-      200,
-      { "set-cookie": sessionCookie(request, "", 0) },
-    );
+    return jsonResponse({ ok: true, authenticated: false }, 200, {
+      "set-cookie": sessionCookie(request, "", 0),
+    });
   }
 
   const token = parseCookies(request).get(ADMIN_COOKIE);
@@ -239,7 +238,10 @@ async function handleAdminGateway(request: Request, env: unknown): Promise<Respo
     );
   }
 
-  const target = new URL(`${url.pathname}${url.search}`, upstreamBase.endsWith("/") ? upstreamBase : `${upstreamBase}/`);
+  const target = new URL(
+    `${url.pathname}${url.search}`,
+    upstreamBase.endsWith("/") ? upstreamBase : `${upstreamBase}/`,
+  );
   const headers = new Headers({
     Accept: request.headers.get("accept") ?? "application/json",
     Authorization: `Bearer ${upstreamToken}`,
