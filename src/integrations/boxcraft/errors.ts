@@ -45,13 +45,9 @@ export class ProductNotFoundError extends BoxcraftError {
 
 export class PayloadIncompleteError extends BoxcraftError {
   constructor(missing: string[]) {
-    super(
-      "payload_incomplete",
-      `Payload package is missing: ${missing.join(", ")}`,
-      {
-        details: { missing },
-      },
-    );
+    super("payload_incomplete", `Payload package is missing: ${missing.join(", ")}`, {
+      details: { missing },
+    });
     this.name = "PayloadIncompleteError";
   }
 }
