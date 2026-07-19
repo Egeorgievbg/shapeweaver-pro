@@ -11,6 +11,7 @@ import { useEffect, type ReactNode } from "react";
 import { Toaster } from "sonner";
 
 import appCss from "../styles.css?url";
+import studioCss from "../studio.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AppHeader } from "@/components/shell/AppHeader";
 
@@ -23,10 +24,7 @@ function NotFoundComponent() {
         <p className="mt-3 text-sm text-muted-foreground">
           The page you were looking for isn't part of the studio.
         </p>
-        <Link
-          to="/"
-          className="mt-6 inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:opacity-90"
-        >
+        <Link to="/" className="studio-primary-button mt-6 justify-center">
           Back to studio
         </Link>
       </div>
@@ -53,14 +51,11 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
               router.invalidate();
               reset();
             }}
-            className="rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:opacity-90"
+            className="studio-primary-button"
           >
             Retry
           </button>
-          <Link
-            to="/"
-            className="rounded-md border border-input bg-background px-4 py-2 text-sm font-medium hover:bg-accent"
-          >
+          <Link to="/" className="studio-secondary-button">
             Home
           </Link>
         </div>
@@ -73,22 +68,26 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
       { title: "GPTSBOXES — 3D Packaging Studio" },
       {
         name: "description",
         content:
-          "Professional 3D packaging design studio: browse 1,600+ die-cut packaging templates, configure dimensions and materials, apply artwork, and export production-ready dielines.",
+          "Professional 3D packaging design studio: browse packaging structures, configure dimensions and materials, apply artwork, and export production-ready projects.",
       },
       { name: "author", content: "GPTSBOXES" },
-      { name: "theme-color", content: "#f5f2ea" },
+      { name: "theme-color", content: "#f6f7f8" },
       { property: "og:title", content: "GPTSBOXES — 3D Packaging Studio" },
-      { property: "og:description", content: "Design, visualize, and export custom packaging in real time." },
+      {
+        property: "og:description",
+        content: "Design, visualize, and quote custom packaging in one connected workflow.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
+      { rel: "stylesheet", href: studioCss },
       { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
     ],
   }),
@@ -118,7 +117,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <div className="flex min-h-screen flex-col bg-background text-foreground">
         <AppHeader />
-        <div className="flex-1 min-h-0">
+        <div className="min-h-0 flex-1">
           <Outlet />
         </div>
       </div>
