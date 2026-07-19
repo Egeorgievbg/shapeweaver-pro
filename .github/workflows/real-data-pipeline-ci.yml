@@ -1,0 +1,67 @@
+name: Real data manifest and export validation
+
+on:
+  push:
+    branches: [feature/real-data-manifest-export-pipeline]
+  pull_request:
+    branches: [feature/bg-en-admin-control-center, main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: real-data-pipeline-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - name: Production build
+        run: bun run build
+      - name: TypeScript and source formatting
+        run: |
+          bunx prettier --check \
+            src/components/export/ExportDialog.tsx \
+            src/components/viewer/Viewport3D.tsx \
+            src/features/configurator/export/nativeExporters.ts \
+            src/features/configurator/export/viewportRegistry.ts \
+            src/features/configurator/geometry/AnimationEvaluator.ts \
+            src/features/configurator/geometry/KnifeRigBuilder.tsx \
+            src/features/configurator/geometry/ManifestGeometryResolver.tsx \
+            src/features/configurator/manifest/adapter.ts \
+            src/features/configurator/manifest/types.ts \
+            src/integrations/boxcraft/endpoints.ts \
+            src/integrations/boxcraft/index.ts \
+            src/lib/i18n-overrides.ts \
+            scripts/audit_core.py \
+            scripts/data_audit.py \
+            .github/workflows/real-data-pipeline-ci.yml
+      - name: ESLint changed TypeScript scope
+        run: |
+          bunx eslint \
+            src/components/export/ExportDialog.tsx \
+            src/components/viewer/Viewport3D.tsx \
+            src/features/configurator/export/nativeExporters.ts \
+            src/features/configurator/export/viewportRegistry.ts \
+            src/features/configurator/geometry/AnimationEvaluator.ts \
+            src/features/configurator/geometry/KnifeRigBuilder.tsx \
+            src/features/configurator/geometry/ManifestGeometryResolver.tsx \
+            src/features/configurator/manifest/adapter.ts \
+            src/features/configurator/manifest/types.ts \
+            src/integrations/boxcraft/endpoints.ts \
+            src/integrations/boxcraft/index.ts \
+            src/lib/i18n-overrides.ts
+      - name: Compile audit scripts
+        run: python -m py_compile scripts/audit_core.py scripts/data_audit.py
+      - name: Run read-only repository audit
+        run: python scripts/data_audit.py . --output data/reports
+      - name: Upload audit reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: real-data-file-and-source-audit
+          path: data/reports
+          retention-days: 7
