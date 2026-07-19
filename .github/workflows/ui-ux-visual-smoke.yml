@@ -1,0 +1,53 @@
+name: UI UX visual smoke
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  visual-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: bun run build
+      - name: Install Chromium
+        run: bunx playwright install --with-deps chromium
+      - name: Start preview
+        shell: bash
+        run: |
+          bun run preview --host 0.0.0.0 --port 4173 > /tmp/shapeweaver-preview.log 2>&1 &
+          for attempt in {1..30}; do
+            if curl --fail --silent http://127.0.0.1:4173/library > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat /tmp/shapeweaver-preview.log
+          exit 1
+      - name: Capture desktop and mobile library
+        run: |
+          bunx playwright screenshot \
+            --device="Desktop Chrome HiDPI" \
+            --wait-for-timeout=8000 \
+            --full-page \
+            http://127.0.0.1:4173/library \
+            ui-ux-library-desktop.png
+          bunx playwright screenshot \
+            --device="Pixel 7" \
+            --wait-for-timeout=8000 \
+            --full-page \
+            http://127.0.0.1:4173/library \
+            ui-ux-library-mobile.png
+      - name: Upload visual evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-ux-visual-smoke
+          path: |
+            ui-ux-library-desktop.png
+            ui-ux-library-mobile.png
+          retention-days: 3
