@@ -25,10 +25,10 @@ jobs:
       - name: Build validated SQLite demo database
         run: |
           mkdir -p data/demo
-          bun <<'TS'
+          cat > scripts/demo/.seed-demo.ts <<'TS'
           import { Database } from "bun:sqlite";
-          import { DEMO_PRODUCTS } from "./scripts/demo/demo-products.ts";
-          import { makeDemoManifest } from "./scripts/demo/demo-manifest.ts";
+          import { DEMO_PRODUCTS } from "./demo-products.ts";
+          import { makeDemoManifest } from "./demo-manifest.ts";
           const db = new Database("data/demo/gptsboxes_demo.sqlite", { create: true, strict: true });
           db.exec("PRAGMA foreign_keys=ON");
           db.exec("CREATE TABLE products(source_id TEXT PRIMARY KEY,name TEXT NOT NULL,family TEXT NOT NULL,category TEXT NOT NULL,material TEXT NOT NULL,color TEXT NOT NULL,length_mm REAL NOT NULL,width_mm REAL NOT NULL,height_mm REAL NOT NULL,product_line TEXT NOT NULL,geometry_quality TEXT NOT NULL,production_status TEXT NOT NULL)");
@@ -47,6 +47,8 @@ jobs:
           if (foreignKeys.length > 0 || !Object.values(integrity).includes("ok")) process.exit(1);
           db.close();
           TS
+          bun scripts/demo/.seed-demo.ts
+          test -s data/demo/gptsboxes_demo.sqlite
       - name: Production build
         run: bun run build
       - name: Start database API and application
