@@ -37,6 +37,8 @@ const POLISH_BG: Record<string, string> = {
   "recorded-animation": "Записана анимация",
   "geometry-only": "Точна статична геометрия",
   "diagnostic-fallback": "Диагностичен модел",
+  "GEOMETRY:": "ГЕОМЕТРИЯ:",
+  "Geometry:": "Геометрия:",
   none: "Без ефект",
   matte: "Матова ламинация",
   gloss: "Гланцова ламинация",
