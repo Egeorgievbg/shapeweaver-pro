@@ -69,10 +69,15 @@ export function RuntimeLocalizationBridgeV2() {
 
   useEffect(() => {
     document.documentElement.lang = locale;
+
+    let cancelled = false;
     let applying = false;
+    let observer: MutationObserver | undefined;
+    let firstFrame = 0;
+    let secondFrame = 0;
 
     const apply = (node: Node) => {
-      if (applying) return;
+      if (cancelled || applying) return;
       applying = true;
       try {
         localizeTree(node, locale);
@@ -81,26 +86,44 @@ export function RuntimeLocalizationBridgeV2() {
       }
     };
 
-    apply(document.body);
-    const observer = new MutationObserver((mutations) => {
-      for (const mutation of mutations) {
-        mutation.addedNodes.forEach(apply);
-        if (mutation.type === "characterData") apply(mutation.target);
-        if (mutation.type === "attributes" && mutation.target instanceof Element) {
-          apply(mutation.target);
-        }
-      }
-    });
+    const start = () => {
+      firstFrame = window.requestAnimationFrame(() => {
+        secondFrame = window.requestAnimationFrame(() => {
+          if (cancelled) return;
+          apply(document.body);
+          observer = new MutationObserver((mutations) => {
+            for (const mutation of mutations) {
+              mutation.addedNodes.forEach(apply);
+              if (mutation.type === "characterData") apply(mutation.target);
+              if (mutation.type === "attributes" && mutation.target instanceof Element) {
+                apply(mutation.target);
+              }
+            }
+          });
+          observer.observe(document.body, {
+            childList: true,
+            subtree: true,
+            characterData: true,
+            attributes: true,
+            attributeFilter: [...LOCALIZED_ATTRIBUTES],
+          });
+        });
+      });
+    };
 
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-      characterData: true,
-      attributes: true,
-      attributeFilter: [...LOCALIZED_ATTRIBUTES],
-    });
+    if (document.readyState === "complete") {
+      start();
+    } else {
+      window.addEventListener("load", start, { once: true });
+    }
 
-    return () => observer.disconnect();
+    return () => {
+      cancelled = true;
+      window.removeEventListener("load", start);
+      window.cancelAnimationFrame(firstFrame);
+      window.cancelAnimationFrame(secondFrame);
+      observer?.disconnect();
+    };
   }, [locale]);
 
   return null;
