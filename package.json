@@ -1,15 +1,25 @@
 {
-  "name": "tanstack_start_ts",
+  "name": "@gptsboxes/shapeweaver-pro",
+  "version": "0.9.0-demo.1",
   "private": true,
+  "description": "Browser-based packaging studio with synchronized dieline, Three.js visualization, BG/EN UI, administration and export workflows.",
   "sideEffects": false,
   "type": "module",
+  "engines": {
+    "bun": ">=1.2.0",
+    "node": ">=22.0.0"
+  },
   "scripts": {
     "dev": "vite dev",
+    "demo": "bun scripts/demo/run-demo.ts",
+    "demo:api": "bun scripts/demo/demo-database-server.ts",
     "build": "vite build",
     "build:dev": "vite build --mode development",
-    "preview": "vite preview",
-    "lint": "eslint .",
-    "format": "prettier --write ."
+    "start": "node .output/server/index.mjs",
+    "preview": "bun run build && bun run start",
+    "lint": "eslint . --rule \"prettier/prettier: off\"",
+    "format": "prettier --write .",
+    "format:check": "prettier --check src/server.ts src/studio.css scripts/demo/stable-demo-manifest.ts vite.config.ts"
   },
   "dependencies": {
     "@fontsource/inter": "^5.2.8",

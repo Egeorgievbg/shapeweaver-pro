@@ -1,0 +1,167 @@
+/* GPTSBOXES Studio interaction layer. Kept separate from semantic colour tokens. */
+/* Validated across desktop and mobile production screenshots. */
+
+.studio-shell {
+  isolation: isolate;
+}
+
+.studio-topbar {
+  box-shadow: 0 1px 0 color-mix(in oklch, var(--color-panel-border) 70%, transparent);
+}
+
+/* Keep default display behaviour at zero specificity so Tailwind responsive
+   utilities such as hidden, sm:inline-flex and md:flex always take priority. */
+:where(.studio-icon-button) {
+  display: inline-flex;
+}
+
+.studio-icon-button {
+  min-height: 2rem;
+  min-width: 2rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+  color: var(--color-muted-foreground);
+  transition:
+    background-color 150ms ease,
+    color 150ms ease,
+    transform 150ms ease;
+}
+
+.studio-icon-button:hover {
+  background: var(--color-accent);
+  color: var(--color-foreground);
+}
+
+.studio-icon-button:active {
+  transform: translateY(1px);
+}
+
+:where(.studio-primary-button, .studio-secondary-button) {
+  display: inline-flex;
+}
+
+.studio-primary-button,
+.studio-secondary-button {
+  min-height: 2.25rem;
+  align-items: center;
+  gap: 0.5rem;
+  border-radius: 0.625rem;
+  padding: 0.5rem 0.8rem;
+  font-size: 0.75rem;
+  font-weight: 650;
+  line-height: 1;
+  transition:
+    transform 150ms ease,
+    opacity 150ms ease,
+    background-color 150ms ease,
+    border-color 150ms ease;
+}
+
+.studio-primary-button {
+  background: var(--color-primary);
+  color: var(--color-primary-foreground);
+  box-shadow: 0 1px 2px color-mix(in oklch, var(--color-foreground) 12%, transparent);
+}
+
+.studio-primary-button:hover {
+  opacity: 0.92;
+  transform: translateY(-1px);
+}
+
+.studio-secondary-button {
+  border: 1px solid var(--color-input);
+  background: var(--color-panel);
+  color: var(--color-foreground);
+}
+
+.studio-secondary-button:hover {
+  border-color: color-mix(in oklch, var(--color-muted-foreground) 40%, var(--color-input));
+  background: var(--color-accent);
+}
+
+.studio-tool-button {
+  display: flex;
+  width: 3.75rem;
+  min-height: 3.3rem;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
+  border-radius: 0.7rem;
+  color: var(--color-muted-foreground);
+  font-size: 0.58rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease,
+    transform 150ms ease;
+}
+
+.studio-tool-button:hover {
+  background: var(--color-accent);
+  color: var(--color-foreground);
+}
+
+.studio-tool-button-active {
+  background: color-mix(in oklch, var(--color-gold) 13%, var(--color-panel));
+  color: var(--color-foreground);
+  box-shadow: inset 3px 0 0 var(--color-gold);
+}
+
+.status-dot {
+  display: inline-block;
+  height: 0.45rem;
+  width: 0.45rem;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  box-shadow: 0 0 0 3px color-mix(in oklch, currentColor 12%, transparent);
+}
+
+input[type="range"] {
+  cursor: pointer;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--color-ring);
+  outline-offset: 2px;
+}
+
+@media (max-width: 767px) {
+  .studio-shell {
+    min-height: 100dvh;
+  }
+}
+
+/* The interaction class is loaded after Tailwind's generated stylesheet.
+   This explicit rule prevents its default inline-flex display from reviving
+   controls marked as desktop-hidden by the responsive utility token. */
+@media (min-width: 1024px) {
+  .studio-secondary-button[class~="lg:hidden"] {
+    display: none !important;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
