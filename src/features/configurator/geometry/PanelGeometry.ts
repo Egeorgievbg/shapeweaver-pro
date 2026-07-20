@@ -14,7 +14,7 @@ export function svgPathToShapes(d: string, panelId = "unknown"): THREE.Shape[] {
 
   try {
     const parsed = loader.parse(svg);
-    const shapes = parsed.paths.flatMap((path) => SVGLoader.createShapes(path));
+    const shapes = parsed.paths.flatMap((path) => path.toShapes());
     if (shapes.length === 0) {
       console.warn("[ShapeWeaver] SVG path produced no closed shapes", {
         panelId,
