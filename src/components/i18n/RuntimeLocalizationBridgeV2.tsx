@@ -120,9 +120,9 @@ export function RuntimeLocalizationBridgeV2() {
     const schedule = () => {
       const idleWindow = window as IdleWindow;
       if (idleWindow.requestIdleCallback) {
-        idleHandle = idleWindow.requestIdleCallback(connect, { timeout: 2000 });
+        idleHandle = idleWindow.requestIdleCallback(connect, { timeout: 700 });
       } else {
-        timeoutHandle = setTimeout(connect, 750);
+        timeoutHandle = setTimeout(connect, 700);
       }
     };
 
