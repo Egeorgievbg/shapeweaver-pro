@@ -3,6 +3,8 @@ name: SQLite demo preview
 on:
   push:
     branches: [fix/sqlite-demo-preview]
+  pull_request:
+    branches: [feature/real-data-manifest-export-pipeline]
   workflow_dispatch:
 
 permissions:
