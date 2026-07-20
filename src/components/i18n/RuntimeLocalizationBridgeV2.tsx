@@ -21,6 +21,12 @@ function translateValue(base: string, locale: "bg" | "en") {
   );
 }
 
+function translateSplitCounter(node: Text, base: string, locale: "bg" | "en") {
+  if (locale !== "bg" || base.trim().toLowerCase() !== "templates") return undefined;
+  const previous = node.previousSibling?.textContent?.trim();
+  return previous === "1" ? "шаблон" : "шаблона";
+}
+
 function localizeTextNode(node: Text, locale: "bg" | "en") {
   if (shouldSkip(node)) return;
   const current = node.nodeValue ?? "";
@@ -29,7 +35,7 @@ function localizeTextNode(node: Text, locale: "bg" | "en") {
 
   const trimmed = base.trim();
   if (!trimmed) return;
-  const translated = translateValue(trimmed, locale);
+  const translated = translateSplitCounter(node, base, locale) ?? translateValue(trimmed, locale);
   if (translated === trimmed && locale === "bg") return;
 
   const leading = base.match(/^\s*/)?.[0] ?? "";
