@@ -144,6 +144,17 @@ textarea:focus-visible {
   .studio-shell {
     min-height: 100dvh;
   }
+
+  /* Keep the geometry status below the 2D/3D mode switch on narrow screens. */
+  .studio-shell
+    [class~="pointer-events-none"][class~="absolute"][class~="left-4"][class~="top-4"][class~="tracking-wider"] {
+    top: 4.5rem;
+    left: 0.75rem;
+    max-width: 10rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }
 
 /* The interaction class is loaded after Tailwind's generated stylesheet.
