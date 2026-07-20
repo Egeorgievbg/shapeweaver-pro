@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 
 const baseUrl = process.env.QA_BASE_URL ?? "http://127.0.0.1:4173";
 const output = resolve(process.env.QA_OUTPUT ?? "artifacts/final-visual-acceptance");
+const scenarioTimeoutMs = 25_000;
 await mkdir(output, { recursive: true });
 
 const browser = await chromium.launch({ headless: true });
@@ -50,6 +51,20 @@ function contextOptions(profile: Profile) {
   };
 }
 
+async function withTimeout<T>(promise: Promise<T>, label: string, milliseconds = scenarioTimeoutMs) {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error(`${label} exceeded ${milliseconds} ms`)), milliseconds);
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 async function clickVisible(page: Page, patterns: RegExp[]) {
   for (const pattern of patterns) {
     const byRole = page.getByRole("button", { name: pattern }).first();
@@ -68,27 +83,27 @@ async function clickVisible(page: Page, patterns: RegExp[]) {
 
 async function openExport(page: Page) {
   await clickVisible(page, [/^Експорт$/i, /^Export$/i]);
-  await page.getByRole("dialog").waitFor({ state: "visible", timeout: 10_000 });
+  await page.getByRole("dialog").waitFor({ state: "visible" });
 }
 
 async function openQuote(page: Page) {
   await clickVisible(page, [/Оферта/i, /Request quote/i]);
-  await page.getByRole("dialog").waitFor({ state: "visible", timeout: 10_000 });
+  await page.getByRole("dialog").waitFor({ state: "visible" });
 }
 
 async function switch2d(page: Page) {
   await clickVisible(page, [/2D.*дилайн/i, /2D.*dieline/i]);
-  await page.waitForTimeout(900);
+  await page.waitForTimeout(700);
 }
 
 async function switchSplit(page: Page) {
   await clickVisible(page, [/Разделен изглед/i, /Split view/i]);
-  await page.waitForTimeout(1200);
+  await page.waitForTimeout(900);
 }
 
 async function openMobileTools(page: Page) {
   await clickVisible(page, [/Отвори.*инструмент/i, /Open editor tools/i, /^Product$/i]);
-  await page.waitForTimeout(500);
+  await page.waitForTimeout(400);
 }
 
 const scenarios: Scenario[] = [
@@ -98,21 +113,21 @@ const scenarios: Scenario[] = [
     name: "desktop-studio-3d-mailer",
     path: "/studio/mailer-001",
     profile: "desktop",
-    settleMs: 3500,
+    settleMs: 2600,
     expectCanvas: true,
   },
   {
     name: "desktop-studio-2d-mailer",
     path: "/studio/mailer-001",
     profile: "desktop",
-    settleMs: 3000,
+    settleMs: 2200,
     action: switch2d,
   },
   {
     name: "desktop-studio-split-rigid",
     path: "/studio/rigid-001",
     profile: "desktop",
-    settleMs: 3500,
+    settleMs: 2600,
     action: switchSplit,
     expectCanvas: true,
   },
@@ -120,7 +135,7 @@ const scenarios: Scenario[] = [
     name: "desktop-export-dialog",
     path: "/studio/mailer-001",
     profile: "desktop",
-    settleMs: 3000,
+    settleMs: 2300,
     action: openExport,
     expectCanvas: true,
   },
@@ -128,7 +143,7 @@ const scenarios: Scenario[] = [
     name: "desktop-quote-dialog",
     path: "/studio/mailer-001",
     profile: "desktop",
-    settleMs: 3000,
+    settleMs: 2300,
     action: openQuote,
     expectCanvas: true,
   },
@@ -138,7 +153,7 @@ const scenarios: Scenario[] = [
     name: "tablet-studio",
     path: "/studio/display-001",
     profile: "tablet",
-    settleMs: 3500,
+    settleMs: 2600,
     expectCanvas: true,
   },
   { name: "mobile-library", path: "/library", profile: "mobile" },
@@ -146,14 +161,14 @@ const scenarios: Scenario[] = [
     name: "mobile-studio-3d",
     path: "/studio/mailer-001",
     profile: "mobile",
-    settleMs: 3500,
+    settleMs: 2600,
     expectCanvas: true,
   },
   {
     name: "mobile-studio-tools",
     path: "/studio/mailer-001",
     profile: "mobile",
-    settleMs: 3000,
+    settleMs: 2300,
     action: openMobileTools,
     expectCanvas: true,
   },
@@ -168,7 +183,8 @@ async function inspectPage(page: Page, result: Result, expectCanvas = false) {
     const brokenImages = Array.from(document.images)
       .filter((image) => image.complete && image.naturalWidth === 0)
       .map((image) => image.currentSrc || image.src || image.alt || "unknown image");
-    const rawTranslationKeys = bodyText.match(/\b(?:export|admin|library|studio|common|quote)\.[a-z][a-z0-9_.-]*/gi) ?? [];
+    const rawTranslationKeys =
+      bodyText.match(/\b(?:export|admin|library|studio|common|quote)\.[a-z][a-z0-9_.-]*/gi) ?? [];
     return {
       scrollWidth: root.scrollWidth,
       clientWidth: root.clientWidth,
@@ -196,9 +212,13 @@ async function inspectPage(page: Page, result: Result, expectCanvas = false) {
   if (expectCanvas && metrics.canvasCount < 1) result.errors.push("Expected Three.js canvas is missing");
 }
 
-for (const scenario of scenarios) {
+for (const [index, scenario] of scenarios.entries()) {
+  console.log(`[${index + 1}/${scenarios.length}] START ${scenario.name}`);
   const context: BrowserContext = await browser.newContext(contextOptions(scenario.profile));
   const page = await context.newPage();
+  page.setDefaultTimeout(7_000);
+  page.setDefaultNavigationTimeout(35_000);
+
   const viewport = page.viewportSize() ?? { width: 0, height: 0 };
   const result: Result = {
     name: scenario.name,
@@ -218,39 +238,44 @@ for (const scenario of scenarios) {
   page.on("response", (response) => {
     const status = response.status();
     const url = response.url();
-    if (status >= 400 && !url.includes("favicon")) {
-      result.errors.push(`HTTP ${status}: ${url}`);
-    }
+    if (status >= 400 && !url.includes("favicon")) result.errors.push(`HTTP ${status}: ${url}`);
   });
 
   try {
-    const response = await page.goto(`${baseUrl}${scenario.path}`, {
-      waitUntil: "domcontentloaded",
-      timeout: 35_000,
-    });
-    result.status = response?.status();
-    if (!response || response.status() >= 400) {
-      result.errors.push(`Navigation status: ${response?.status() ?? "no response"}`);
-    }
-    await page.evaluate(() => document.fonts.ready);
-    await page.waitForTimeout(scenario.settleMs ?? 1800);
-    if (scenario.action) await scenario.action(page);
-    await inspectPage(page, result, scenario.expectCanvas);
+    await withTimeout(
+      (async () => {
+        const response = await page.goto(`${baseUrl}${scenario.path}`, {
+          waitUntil: "domcontentloaded",
+          timeout: 35_000,
+        });
+        result.status = response?.status();
+        if (!response || response.status() >= 400) {
+          result.errors.push(`Navigation status: ${response?.status() ?? "no response"}`);
+        }
+        await page.evaluate(() => document.fonts.ready);
+        await page.waitForTimeout(scenario.settleMs ?? 1500);
+        if (scenario.action) await scenario.action(page);
+        await inspectPage(page, result, scenario.expectCanvas);
 
-    const screenshot = `${output}/${scenario.name}.png`;
-    await page.screenshot({
-      path: screenshot,
-      fullPage: false,
-      animations: "disabled",
-      caret: "hide",
-    });
-    result.screenshot = screenshot;
+        const screenshot = `${output}/${scenario.name}.png`;
+        await page.screenshot({
+          path: screenshot,
+          fullPage: false,
+          animations: "disabled",
+          caret: "hide",
+          timeout: 12_000,
+        });
+        result.screenshot = screenshot;
+      })(),
+      scenario.name,
+    );
   } catch (error) {
     result.errors.push(error instanceof Error ? error.stack ?? error.message : String(error));
   } finally {
     results.push(result);
     await Bun.write(`${output}/${scenario.name}.json`, JSON.stringify(result, null, 2));
-    await context.close();
+    await context.close().catch(() => undefined);
+    console.log(`[${index + 1}/${scenarios.length}] END ${scenario.name} errors=${result.errors.length}`);
   }
 }
 
