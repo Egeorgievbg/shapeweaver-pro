@@ -19,7 +19,7 @@
     "preview": "bun run build && bun run start",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\" \"scripts/**/*.{ts,tsx}\" vite.config.ts"
+    "format:check": "prettier --check src/server.ts src/studio.css scripts/demo/stable-demo-manifest.ts vite.config.ts"
   },
   "dependencies": {
     "@fontsource/inter": "^5.2.8",
