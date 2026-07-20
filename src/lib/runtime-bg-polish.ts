@@ -10,7 +10,15 @@ const POLISH_BG: Record<string, string> = {
   "No artwork layers": "Няма слоеве с дизайн",
   "Upload a print file and assign it to a panel or the full dieline.":
     "Качете файл за печат и го задайте към панел или към целия дилайн.",
+  "Search mailer, rigid, tuck end, display, FEFCO…":
+    "Търси куриерски, твърди, сгъваеми, дисплейни и FEFCO конструкции…",
   Panel: "Панел",
+  Base: "Основа",
+  Lid: "Капак",
+  Front: "Отпред",
+  Back: "Отзад",
+  Left: "Отляво",
+  Right: "Отдясно",
   "Print side": "Страна за печат",
   Outside: "Отвън",
   Inside: "Отвътре",
