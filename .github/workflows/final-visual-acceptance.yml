@@ -1,0 +1,96 @@
+name: Final visual acceptance
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: final-visual-acceptance-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  visual-acceptance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Install Chromium
+        run: |
+          bun add --dev --no-save playwright@1.55.0
+          bunx playwright install --with-deps chromium
+
+      - name: Create validated SQLite database
+        run: |
+          mkdir -p data/demo
+          cat > scripts/demo/.seed-final-visual.ts <<'TS'
+          import { Database } from "bun:sqlite";
+          import { DEMO_PRODUCTS } from "./demo-products";
+          import { makeStableDemoManifest } from "./stable-demo-manifest";
+          const db = new Database("data/demo/gptsboxes_demo.sqlite", { create: true, strict: true });
+          db.exec("PRAGMA foreign_keys=ON");
+          db.exec("CREATE TABLE products(source_id TEXT PRIMARY KEY,name TEXT NOT NULL,family TEXT NOT NULL,category TEXT NOT NULL,material TEXT NOT NULL,color TEXT NOT NULL,length_mm REAL NOT NULL,width_mm REAL NOT NULL,height_mm REAL NOT NULL,product_line TEXT NOT NULL,geometry_quality TEXT NOT NULL,production_status TEXT NOT NULL)");
+          db.exec("CREATE TABLE manifests(source_id TEXT PRIMARY KEY REFERENCES products(source_id),source_hash TEXT NOT NULL,manifest_json TEXT NOT NULL)");
+          const product = db.prepare("INSERT INTO products VALUES ($sourceId,$name,$family,$category,$material,$color,$length,$width,$height,$productLine,'qa-fixture','unverified')");
+          const manifest = db.prepare("INSERT INTO manifests VALUES ($sourceId,$sourceHash,$manifestJson)");
+          for (const item of DEMO_PRODUCTS) {
+            product.run(item);
+            const value = makeStableDemoManifest(item);
+            manifest.run({ sourceId: item.sourceId, sourceHash: value.sourceHash, manifestJson: JSON.stringify(value) });
+          }
+          const integrity = db.query("PRAGMA integrity_check").get();
+          const foreignKeys = db.query("PRAGMA foreign_key_check").all();
+          if (!Object.values(integrity).includes("ok") || foreignKeys.length > 0) process.exit(1);
+          db.close();
+          TS
+          bun scripts/demo/.seed-final-visual.ts
+
+      - name: Build production application
+        run: bun run build
+
+      - name: Start application stack
+        env:
+          PORT: "4173"
+          NITRO_PORT: "4173"
+          HOST: 0.0.0.0
+          GPTSBOXES_DEMO_API_PORT: "4174"
+          BOXCRAFT_UPSTREAM_URL: http://127.0.0.1:4174
+          GPTSBOXES_ADMIN_ACCESS_KEY: shapeweaver-demo-admin
+          GPTSBOXES_ADMIN_SESSION_SECRET: shapeweaver-demo-session-secret-32-chars
+          GPTSBOXES_ADMIN_UPSTREAM_URL: http://127.0.0.1:4174
+          GPTSBOXES_ADMIN_UPSTREAM_TOKEN: shapeweaver-demo-token
+        run: |
+          nohup bun scripts/demo/demo-database-server.ts > demo-api.log 2>&1 &
+          nohup node .output/server/index.mjs > application.log 2>&1 &
+          for attempt in {1..60}; do
+            curl --fail --silent http://127.0.0.1:4174/api/health >/dev/null && curl --fail --silent http://127.0.0.1:4173/library >/dev/null && break
+            sleep 1
+          done
+          curl --fail http://127.0.0.1:4174/api/health
+          curl --fail http://127.0.0.1:4173/library
+
+      - name: Run strict desktop tablet and mobile acceptance
+        env:
+          QA_BASE_URL: http://127.0.0.1:4173
+          QA_OUTPUT: artifacts/final-visual-acceptance
+        run: bun scripts/qa/final-visual-acceptance-v2.ts
+
+      - name: Upload evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: final-visual-acceptance
+          path: |
+            artifacts/final-visual-acceptance
+            application.log
+            demo-api.log
+          if-no-files-found: error
+          retention-days: 14

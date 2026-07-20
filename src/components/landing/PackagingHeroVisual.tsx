@@ -1,6 +1,12 @@
 import { Layers3, ScanLine, Sparkles } from "lucide-react";
+import { useI18n } from "@/lib/i18n";
 
 export function PackagingHeroVisual({ label }: { label: string }) {
+  const { locale } = useI18n();
+  const liveGeometry = locale === "bg" ? "активна геометрия" : "live geometry";
+  const realtime = locale === "bg" ? "В РЕАЛНО ВРЕМЕ" : "REAL-TIME";
+  const dieline = locale === "bg" ? "ДИЛАЙН" : "DIELINE";
+
   return (
     <div className="relative aspect-[4/3] overflow-hidden rounded-2xl border border-panel-border bg-viewport shadow-2xl shadow-black/10">
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_20%,rgba(201,163,74,.18),transparent_38%)]" />
@@ -14,7 +20,7 @@ export function PackagingHeroVisual({ label }: { label: string }) {
       />
 
       <div className="absolute left-5 top-5 flex items-center gap-2 rounded-full border border-panel-border bg-panel/80 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-muted-foreground backdrop-blur">
-        <span className="h-1.5 w-1.5 rounded-full bg-success" /> live geometry
+        <span className="h-1.5 w-1.5 rounded-full bg-success" /> {liveGeometry}
       </div>
       <div className="absolute right-5 top-5 flex gap-2">
         <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-panel-border bg-panel/80 text-gold">
@@ -39,7 +45,9 @@ export function PackagingHeroVisual({ label }: { label: string }) {
             <stop stopColor="#d8a74d" />
             <stop offset="1" stopColor="#946322" />
           </linearGradient>
-          <filter id="shadow"><feDropShadow dx="0" dy="18" stdDeviation="14" floodOpacity=".35" /></filter>
+          <filter id="shadow">
+            <feDropShadow dx="0" dy="18" stdDeviation="14" floodOpacity=".35" />
+          </filter>
         </defs>
         <ellipse cx="230" cy="257" rx="155" ry="28" fill="#000" opacity=".25" />
         <g filter="url(#shadow)">
@@ -61,7 +69,7 @@ export function PackagingHeroVisual({ label }: { label: string }) {
         <div>
           <p className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted-foreground">{label}</p>
           <div className="mt-2 flex gap-1.5">
-            {["3D", "DIELINE", "PBR"].map((item) => (
+            {["3D", dieline, "PBR"].map((item) => (
               <span key={item} className="rounded-md border border-panel-border bg-panel/80 px-2 py-1 font-mono text-[8px] text-muted-foreground">
                 {item}
               </span>
@@ -70,7 +78,7 @@ export function PackagingHeroVisual({ label }: { label: string }) {
         </div>
         <div className="flex items-center gap-2 rounded-xl border border-gold/25 bg-gold/10 px-3 py-2 text-gold">
           <Sparkles className="h-4 w-4" />
-          <span className="text-[10px] font-semibold">REAL-TIME</span>
+          <span className="text-[10px] font-semibold">{realtime}</span>
         </div>
       </div>
     </div>

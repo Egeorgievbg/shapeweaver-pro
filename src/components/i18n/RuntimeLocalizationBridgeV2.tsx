@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { translateRuntimeText, useI18n } from "@/lib/i18n";
 import { translateExtendedRuntimeText } from "@/lib/runtime-bg-extended";
+import { translatePolishedRuntimeText } from "@/lib/runtime-bg-polish";
 
 const originalText = new WeakMap<Text, string>();
 const originalAttributes = new WeakMap<Element, Map<string, string>>();
@@ -13,7 +14,17 @@ function shouldSkip(node: Node) {
 
 function translateValue(base: string, locale: "bg" | "en") {
   if (locale === "en") return base;
-  return translateExtendedRuntimeText(base) ?? translateRuntimeText(base, "bg");
+  return (
+    translatePolishedRuntimeText(base) ??
+    translateExtendedRuntimeText(base) ??
+    translateRuntimeText(base, "bg")
+  );
+}
+
+function translateSplitCounter(node: Text, base: string, locale: "bg" | "en") {
+  if (locale !== "bg" || base.trim().toLowerCase() !== "templates") return undefined;
+  const previous = node.previousSibling?.textContent?.trim();
+  return previous === "1" ? "шаблон" : "шаблона";
 }
 
 function localizeTextNode(node: Text, locale: "bg" | "en") {
@@ -24,7 +35,7 @@ function localizeTextNode(node: Text, locale: "bg" | "en") {
 
   const trimmed = base.trim();
   if (!trimmed) return;
-  const translated = translateValue(trimmed, locale);
+  const translated = translateSplitCounter(node, base, locale) ?? translateValue(trimmed, locale);
   if (translated === trimmed && locale === "bg") return;
 
   const leading = base.match(/^\s*/)?.[0] ?? "";
@@ -64,15 +75,25 @@ function localizeTree(root: Node, locale: "bg" | "en") {
   }
 }
 
+type IdleWindow = Window & {
+  requestIdleCallback?: (callback: IdleRequestCallback, options?: IdleRequestOptions) => number;
+  cancelIdleCallback?: (handle: number) => void;
+};
+
 export function RuntimeLocalizationBridgeV2() {
   const { locale } = useI18n();
 
   useEffect(() => {
     document.documentElement.lang = locale;
+
+    let cancelled = false;
     let applying = false;
+    let observer: MutationObserver | undefined;
+    let idleHandle: number | undefined;
+    let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
 
     const apply = (node: Node) => {
-      if (applying) return;
+      if (cancelled || applying) return;
       applying = true;
       try {
         localizeTree(node, locale);
@@ -81,26 +102,50 @@ export function RuntimeLocalizationBridgeV2() {
       }
     };
 
-    apply(document.body);
-    const observer = new MutationObserver((mutations) => {
-      for (const mutation of mutations) {
-        mutation.addedNodes.forEach(apply);
-        if (mutation.type === "characterData") apply(mutation.target);
-        if (mutation.type === "attributes" && mutation.target instanceof Element) {
-          apply(mutation.target);
+    const connect = () => {
+      if (cancelled) return;
+      apply(document.body);
+      observer = new MutationObserver((mutations) => {
+        for (const mutation of mutations) {
+          mutation.addedNodes.forEach(apply);
+          if (mutation.type === "characterData") apply(mutation.target);
+          if (mutation.type === "attributes" && mutation.target instanceof Element) {
+            apply(mutation.target);
+          }
         }
+      });
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+        attributes: true,
+        attributeFilter: [...LOCALIZED_ATTRIBUTES],
+      });
+    };
+
+    const schedule = () => {
+      const idleWindow = window as IdleWindow;
+      if (idleWindow.requestIdleCallback) {
+        idleHandle = idleWindow.requestIdleCallback(connect, { timeout: 700 });
+      } else {
+        timeoutHandle = setTimeout(connect, 700);
       }
-    });
+    };
 
-    observer.observe(document.body, {
-      childList: true,
-      subtree: true,
-      characterData: true,
-      attributes: true,
-      attributeFilter: [...LOCALIZED_ATTRIBUTES],
-    });
+    if (document.readyState === "complete") {
+      schedule();
+    } else {
+      window.addEventListener("load", schedule, { once: true });
+    }
 
-    return () => observer.disconnect();
+    return () => {
+      cancelled = true;
+      window.removeEventListener("load", schedule);
+      const idleWindow = window as IdleWindow;
+      if (idleHandle !== undefined) idleWindow.cancelIdleCallback?.(idleHandle);
+      if (timeoutHandle !== undefined) clearTimeout(timeoutHandle);
+      observer?.disconnect();
+    };
   }, [locale]);
 
   return null;

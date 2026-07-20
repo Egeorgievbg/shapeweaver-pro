@@ -25,7 +25,7 @@ export const Route = createFileRoute("/")({
 });
 
 function LandingPage() {
-  const { t, formatNumber } = useI18n();
+  const { t, formatNumber, locale } = useI18n();
   const products = useProductsPage({ limit: 1, offset: 0 });
   const relations = useRelations();
   const productCount = products.data?.pagination.total;
@@ -45,7 +45,7 @@ function LandingPage() {
     },
     {
       icon: Palette,
-      label: t("landing.feature.artwork"),
+      label: locale === "bg" ? "Система за дизайн" : t("landing.feature.artwork"),
       desc: t("landing.feature.artwork.body"),
     },
     {
@@ -54,6 +54,9 @@ function LandingPage() {
       desc: t("landing.feature.render.body"),
     },
   ];
+
+  const statistic = (value: number, bg: string, en: string) =>
+    `${formatNumber(value)} ${locale === "bg" ? bg : en}`;
 
   return (
     <div
@@ -89,13 +92,13 @@ function LandingPage() {
             ) : (
               <>
                 <span className="rounded-md border border-panel-border bg-panel px-2.5 py-1.5">
-                  {formatNumber(productCount)} products
+                  {statistic(productCount, "продукта", "products")}
                 </span>
                 <span className="rounded-md border border-panel-border bg-panel px-2.5 py-1.5">
-                  {formatNumber(familyCount ?? 0)} families
+                  {statistic(familyCount ?? 0, "семейства", "families")}
                 </span>
                 <span className="rounded-md border border-panel-border bg-panel px-2.5 py-1.5">
-                  {formatNumber(categoryCount ?? 0)} categories
+                  {statistic(categoryCount ?? 0, "категории", "categories")}
                 </span>
               </>
             )}
