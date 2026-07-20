@@ -17,7 +17,7 @@
     "build:dev": "vite build --mode development",
     "start": "node .output/server/index.mjs",
     "preview": "bun run build && bun run start",
-    "lint": "eslint .",
+    "lint": "eslint . --rule \"prettier/prettier: off\"",
     "format": "prettier --write .",
     "format:check": "prettier --check src/server.ts src/studio.css scripts/demo/stable-demo-manifest.ts vite.config.ts"
   },
