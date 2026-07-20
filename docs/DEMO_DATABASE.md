@@ -8,8 +8,9 @@
 
 ```text
 File: gptsboxes_demo.sqlite
+Dataset version: 2026.07.20-v1
 Size: 40,960 bytes
-SHA-256: a9dc82e3b3d106d0ec65dd20f9e8a2ce192fcf06f359ba3866b933379e92609e
+SHA-256: bbd3f1400efd2b06b68717fb52ff1f31b477c844c6f50b333e8b7c947a18a9ad
 Tables: products, manifests
 Products: 5
 Manifests: 5
@@ -50,6 +51,7 @@ sqlite3 data/demo/gptsboxes_demo.sqlite "PRAGMA integrity_check;"
 sqlite3 data/demo/gptsboxes_demo.sqlite "PRAGMA foreign_key_check;"
 sqlite3 data/demo/gptsboxes_demo.sqlite "SELECT COUNT(*) FROM products;"
 sqlite3 data/demo/gptsboxes_demo.sqlite "SELECT COUNT(*) FROM manifests;"
+sha256sum data/demo/gptsboxes_demo.sqlite
 ```
 
 Expected output:
@@ -59,6 +61,7 @@ ok
 0 foreign-key rows
 5 products
 5 manifests
+bbd3f1400efd2b06b68717fb52ff1f31b477c844c6f50b333e8b7c947a18a9ad
 ```
 
 ## Replacement with production data
