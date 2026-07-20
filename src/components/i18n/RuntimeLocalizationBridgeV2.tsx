@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { translateRuntimeText, useI18n } from "@/lib/i18n";
 import { translateExtendedRuntimeText } from "@/lib/runtime-bg-extended";
+import { translatePolishedRuntimeText } from "@/lib/runtime-bg-polish";
 
 const originalText = new WeakMap<Text, string>();
 const originalAttributes = new WeakMap<Element, Map<string, string>>();
@@ -13,7 +14,11 @@ function shouldSkip(node: Node) {
 
 function translateValue(base: string, locale: "bg" | "en") {
   if (locale === "en") return base;
-  return translateExtendedRuntimeText(base) ?? translateRuntimeText(base, "bg");
+  return (
+    translatePolishedRuntimeText(base) ??
+    translateExtendedRuntimeText(base) ??
+    translateRuntimeText(base, "bg")
+  );
 }
 
 function localizeTextNode(node: Text, locale: "bg" | "en") {
