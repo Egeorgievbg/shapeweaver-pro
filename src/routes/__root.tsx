@@ -14,7 +14,6 @@ import appCss from "../styles.css?url";
 import studioCss from "../studio.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AppHeader } from "@/components/shell/AppHeader";
-import { RuntimeLocalizationBridge } from "@/components/i18n/RuntimeLocalizationBridge";
 import { useI18n } from "@/lib/i18n";
 
 function NotFoundComponent() {
@@ -42,7 +41,7 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
     reportLovableError(error, { boundary: "tanstack_root_error_component" });
   }, [error]);
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+    <div className="flex min-h-screen items-center justify-center bg-background px-6">
       <div className="max-w-lg text-center">
         <p className="font-mono text-xs uppercase tracking-[0.2em] text-destructive">
           {t("root.error.eyebrow")}
@@ -123,7 +122,6 @@ function RootComponent() {
   const { locale } = useI18n();
   return (
     <QueryClientProvider client={queryClient}>
-      <RuntimeLocalizationBridge />
       <div className="flex min-h-screen flex-col bg-background text-foreground">
         <AppHeader />
         <div className="min-h-0 flex-1">
