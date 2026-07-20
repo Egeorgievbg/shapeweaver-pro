@@ -1,4 +1,4 @@
-name: Temporary format report
+name: Temporary demo formatter
 
 on:
   pull_request:
@@ -15,10 +15,14 @@ jobs:
       - uses: oven-sh/setup-bun@v2
       - run: bun install --frozen-lockfile
       - run: |
-          bunx prettier --list-different "src/**/*.{ts,tsx,css}" "scripts/**/*.{ts,tsx}" vite.config.ts | tee format-different.txt
+          bunx prettier --write scripts/demo/demo-database-server.ts scripts/demo/run-demo.ts scripts/demo/stable-demo-manifest.ts
+          mkdir -p formatted/scripts/demo
+          cp scripts/demo/demo-database-server.ts formatted/scripts/demo/
+          cp scripts/demo/run-demo.ts formatted/scripts/demo/
+          cp scripts/demo/stable-demo-manifest.ts formatted/scripts/demo/
       - uses: actions/upload-artifact@v4
         with:
-          name: format-different
-          path: format-different.txt
+          name: formatted-demo-files
+          path: formatted
           if-no-files-found: error
           retention-days: 1
