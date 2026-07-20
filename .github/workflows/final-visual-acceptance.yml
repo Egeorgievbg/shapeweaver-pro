@@ -81,7 +81,7 @@ jobs:
         env:
           QA_BASE_URL: http://127.0.0.1:4173
           QA_OUTPUT: artifacts/final-visual-acceptance
-        run: bun scripts/qa/final-visual-acceptance.ts
+        run: bun scripts/qa/final-visual-acceptance-v2.ts
 
       - name: Upload evidence
         if: always()
