@@ -1,0 +1,97 @@
+name: ShapeWeaver CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main, release/shapeweaver-sqlite-demo]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: shapeweaver-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Formatting
+        run: bun run format:check
+
+      - name: Lint
+        run: bun run lint
+
+      - name: Production build
+        run: bun run build
+
+      - name: Viewer manifest contract
+        run: bun scripts/qa/manifest-contract.ts
+
+      - name: Compile data audit tools
+        run: python -m py_compile scripts/audit_core.py scripts/audit_core_v2.py scripts/data_audit.py
+
+      - name: Build validated SQLite demo database
+        run: |
+          mkdir -p data/demo
+          cat > scripts/demo/.seed-ci.ts <<'TS'
+          import { Database } from "bun:sqlite";
+          import { DEMO_PRODUCTS } from "./demo-products";
+          import { makeStableDemoManifest } from "./stable-demo-manifest";
+          const db = new Database("data/demo/gptsboxes_demo.sqlite", { create: true, strict: true });
+          db.exec("PRAGMA foreign_keys=ON");
+          db.exec("CREATE TABLE products(source_id TEXT PRIMARY KEY,name TEXT NOT NULL,family TEXT NOT NULL,category TEXT NOT NULL,material TEXT NOT NULL,color TEXT NOT NULL,length_mm REAL NOT NULL,width_mm REAL NOT NULL,height_mm REAL NOT NULL,product_line TEXT NOT NULL,geometry_quality TEXT NOT NULL,production_status TEXT NOT NULL)");
+          db.exec("CREATE TABLE manifests(source_id TEXT PRIMARY KEY REFERENCES products(source_id),source_hash TEXT NOT NULL,manifest_json TEXT NOT NULL)");
+          const product = db.prepare("INSERT INTO products VALUES ($sourceId,$name,$family,$category,$material,$color,$length,$width,$height,$productLine,'qa-fixture','unverified')");
+          const manifest = db.prepare("INSERT INTO manifests VALUES ($sourceId,$sourceHash,$manifestJson)");
+          for (const item of DEMO_PRODUCTS) {
+            product.run(item);
+            const value = makeStableDemoManifest(item);
+            manifest.run({ sourceId: item.sourceId, sourceHash: value.sourceHash, manifestJson: JSON.stringify(value) });
+          }
+          const integrity = db.query("PRAGMA integrity_check").get();
+          const foreignKeys = db.query("PRAGMA foreign_key_check").all();
+          const products = db.query("SELECT COUNT(*) AS count FROM products").get();
+          const manifests = db.query("SELECT COUNT(*) AS count FROM manifests").get();
+          console.log({ integrity, foreignKeyErrors: foreignKeys.length, products, manifests });
+          if (!Object.values(integrity).includes("ok") || foreignKeys.length > 0) process.exit(1);
+          db.close();
+          TS
+          bun scripts/demo/.seed-ci.ts
+          test -s data/demo/gptsboxes_demo.sqlite
+
+      - name: SQLite API smoke test
+        env:
+          GPTSBOXES_DEMO_API_PORT: "4174"
+        run: |
+          nohup bun scripts/demo/demo-database-server.ts > demo-api.log 2>&1 &
+          for attempt in {1..30}; do
+            curl --fail --silent http://127.0.0.1:4174/api/health >/dev/null && break
+            sleep 1
+          done
+          curl --fail http://127.0.0.1:4174/api/health
+          curl --fail http://127.0.0.1:4174/api/v1/visualization/products
+          curl --fail http://127.0.0.1:4174/api/v1/products/mailer-001/manifest
+
+      - name: Upload demo database and logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: shapeweaver-ci-evidence
+          path: |
+            data/demo/gptsboxes_demo.sqlite
+            demo-api.log
+          if-no-files-found: warn
+          retention-days: 7
