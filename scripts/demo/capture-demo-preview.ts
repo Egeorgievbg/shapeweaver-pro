@@ -18,12 +18,22 @@ async function capture(name: string, path: string, mobile = false) {
   page.on("pageerror", (error) => errors.push(error.message));
   page.on("console", (message) => message.type() === "error" && errors.push(message.text()));
   try {
-    const response = await page.goto(`http://127.0.0.1:4173${path}`, { waitUntil: "domcontentloaded", timeout: 30_000 });
+    const response = await page.goto(`http://127.0.0.1:4173${path}`, {
+      waitUntil: "domcontentloaded",
+      timeout: 30_000,
+    });
     await page.waitForTimeout(path.includes("studio") ? 3500 : 1500);
-    await page.screenshot({ path: `${output}/${name}.png`, fullPage: true });
-    await Bun.write(`${output}/${name}.json`, JSON.stringify({ path, status: response?.status(), errors }, null, 2));
+    await page.screenshot({
+      path: `${output}/${name}.png`,
+      fullPage: !path.includes("library"),
+      animations: "disabled",
+    });
+    await Bun.write(
+      `${output}/${name}.json`,
+      JSON.stringify({ path, status: response?.status(), errors }, null, 2),
+    );
   } catch (error) {
-    const message = error instanceof Error ? error.stack ?? error.message : String(error);
+    const message = error instanceof Error ? (error.stack ?? error.message) : String(error);
     failures.push({ name, path, error: message });
     await Bun.write(`${output}/${name}-error.txt`, `${message}\n\n${errors.join("\n")}`);
   } finally {
