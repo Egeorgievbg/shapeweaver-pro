@@ -22,7 +22,7 @@ const schema = z.object({
   email: z.string().trim().email().max(255),
   phone: z.string().trim().max(40).optional().or(z.literal("")),
   quantity: z.coerce.number().int().min(1).max(10_000_000),
-  deadline: z.string().optional().or(z.literal("")),
+  deadline: z.string().trim().max(40).optional().or(z.literal("")),
   notes: z.string().max(2000).optional().or(z.literal("")),
   consent: z.literal(true),
 });
@@ -38,6 +38,7 @@ type QuoteCopy = {
   email: string;
   quantity: string;
   deadline: string;
+  deadlinePlaceholder: string;
   notes: string;
   notesPlaceholder: string;
   consent: string;
@@ -66,6 +67,7 @@ const COPY: Record<Locale, QuoteCopy> = {
     email: "Имейл",
     quantity: "Количество",
     deadline: "Желан срок",
+    deadlinePlaceholder: "дд.мм.гггг",
     notes: "Бележки",
     notesPlaceholder: "Ефекти, цветове, доставка и други изисквания…",
     consent: "Съгласявам се да се свържете с мен във връзка с тази заявка.",
@@ -93,6 +95,7 @@ const COPY: Record<Locale, QuoteCopy> = {
     email: "Email",
     quantity: "Quantity",
     deadline: "Preferred deadline",
+    deadlinePlaceholder: "dd/mm/yyyy",
     notes: "Notes",
     notesPlaceholder: "Print effects, colours, delivery details and other requirements…",
     consent: "I agree to be contacted regarding this request.",
@@ -198,8 +201,10 @@ export function QuoteDialog({
             </Field>
             <Field label={copy.deadline} error={errors.deadline?.message}>
               <input
-                type="date"
-                lang={locale === "bg" ? "bg-BG" : "en-GB"}
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
+                placeholder={copy.deadlinePlaceholder}
                 {...register("deadline")}
                 className="input"
               />
