@@ -69,6 +69,11 @@ function localizeTree(root: Node, locale: "bg" | "en") {
   }
 }
 
+type IdleWindow = Window & {
+  requestIdleCallback?: (callback: IdleRequestCallback, options?: IdleRequestOptions) => number;
+  cancelIdleCallback?: (handle: number) => void;
+};
+
 export function RuntimeLocalizationBridgeV2() {
   const { locale } = useI18n();
 
@@ -78,8 +83,8 @@ export function RuntimeLocalizationBridgeV2() {
     let cancelled = false;
     let applying = false;
     let observer: MutationObserver | undefined;
-    let firstFrame = 0;
-    let secondFrame = 0;
+    let idleHandle: number | undefined;
+    let timeoutHandle: ReturnType<typeof setTimeout> | undefined;
 
     const apply = (node: Node) => {
       if (cancelled || applying) return;
@@ -91,42 +96,48 @@ export function RuntimeLocalizationBridgeV2() {
       }
     };
 
-    const start = () => {
-      firstFrame = window.requestAnimationFrame(() => {
-        secondFrame = window.requestAnimationFrame(() => {
-          if (cancelled) return;
-          apply(document.body);
-          observer = new MutationObserver((mutations) => {
-            for (const mutation of mutations) {
-              mutation.addedNodes.forEach(apply);
-              if (mutation.type === "characterData") apply(mutation.target);
-              if (mutation.type === "attributes" && mutation.target instanceof Element) {
-                apply(mutation.target);
-              }
-            }
-          });
-          observer.observe(document.body, {
-            childList: true,
-            subtree: true,
-            characterData: true,
-            attributes: true,
-            attributeFilter: [...LOCALIZED_ATTRIBUTES],
-          });
-        });
+    const connect = () => {
+      if (cancelled) return;
+      apply(document.body);
+      observer = new MutationObserver((mutations) => {
+        for (const mutation of mutations) {
+          mutation.addedNodes.forEach(apply);
+          if (mutation.type === "characterData") apply(mutation.target);
+          if (mutation.type === "attributes" && mutation.target instanceof Element) {
+            apply(mutation.target);
+          }
+        }
+      });
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true,
+        characterData: true,
+        attributes: true,
+        attributeFilter: [...LOCALIZED_ATTRIBUTES],
       });
     };
 
+    const schedule = () => {
+      const idleWindow = window as IdleWindow;
+      if (idleWindow.requestIdleCallback) {
+        idleHandle = idleWindow.requestIdleCallback(connect, { timeout: 2000 });
+      } else {
+        timeoutHandle = setTimeout(connect, 750);
+      }
+    };
+
     if (document.readyState === "complete") {
-      start();
+      schedule();
     } else {
-      window.addEventListener("load", start, { once: true });
+      window.addEventListener("load", schedule, { once: true });
     }
 
     return () => {
       cancelled = true;
-      window.removeEventListener("load", start);
-      window.cancelAnimationFrame(firstFrame);
-      window.cancelAnimationFrame(secondFrame);
+      window.removeEventListener("load", schedule);
+      const idleWindow = window as IdleWindow;
+      if (idleHandle !== undefined) idleWindow.cancelIdleCallback?.(idleHandle);
+      if (timeoutHandle !== undefined) clearTimeout(timeoutHandle);
       observer?.disconnect();
     };
   }, [locale]);
