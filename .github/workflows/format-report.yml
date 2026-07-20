@@ -1,0 +1,24 @@
+name: Temporary format report
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  report:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - run: bun install --frozen-lockfile
+      - run: |
+          bunx prettier --list-different "src/**/*.{ts,tsx,css}" "scripts/**/*.{ts,tsx}" vite.config.ts | tee format-different.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: format-different
+          path: format-different.txt
+          if-no-files-found: error
+          retention-days: 1
